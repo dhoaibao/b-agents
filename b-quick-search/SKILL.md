@@ -1,5 +1,5 @@
 ---
-name: b-search
+name: b-quick-search
 description: >
   Use Brave Search MCP to find current, up-to-date information from the web.
   ALWAYS use this skill when the user asks to "search", "tìm kiếm", "search the web",
@@ -9,7 +9,7 @@ description: >
   explicitly say "brave search". When in doubt about whether info might be outdated, use this skill.
 ---
 
-# b-search
+# b-quick-search
 
 Uses the `brave-search` MCP server to fetch live web results and return a clean, cited summary.
 
@@ -18,7 +18,7 @@ Uses the `brave-search` MCP server to fetch live web results and return a clean,
 - User says: "search", "tìm", "tìm kiếm", "search the web", "find", "look up"
 - User asks about: latest versions, recent news, current prices, new releases, recent changelogs
 - Any question where training data might be stale (packages, APIs, CVEs, tools)
-- User explicitly says `/b-search` or "use brave search"
+- User explicitly says `/b-quick-search` or "use brave search"
 
 ## Steps
 
