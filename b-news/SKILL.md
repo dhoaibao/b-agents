@@ -22,16 +22,16 @@ If `brave-search` is unavailable, stop and tell the user:
 
 ## Sources
 
-| Source | Domain |
-|---|---|
-| 9to5Google | 9to5google.com |
-| 9to5Linux | 9to5linux.com |
-| 9to5Mac | 9to5mac.com |
-| Engadget | engadget.com |
-| How-To Geek | howtogeek.com |
-| Android Central | androidcentral.com |
-| TechCrunch | techcrunch.com |
-| The Verge | theverge.com |
+| Source | Domain | Focus |
+|---|---|---|
+| 9to5Google | 9to5google.com | Android, Google, Pixel |
+| 9to5Mac | 9to5mac.com | Apple, iOS, Mac |
+| 9to5Linux | 9to5linux.com | Linux, open source |
+| Ars Technica | arstechnica.com | Tech + Science |
+| Hacker News | news.ycombinator.com | Community-curated |
+| How-To Geek | howtogeek.com | Software, Windows, Linux |
+| BleepingComputer | bleepingcomputer.com | Security, malware |
+| The Register | theregister.com | Enterprise tech |
 
 ## Steps
 
@@ -41,9 +41,9 @@ Run **4 parallel searches** (group sources to reduce tool calls):
 
 ```
 Search 1: "site:9to5google.com OR site:9to5mac.com today"
-Search 2: "site:theverge.com OR site:techcrunch.com today"
-Search 3: "site:engadget.com OR site:androidcentral.com today"
-Search 4: "site:howtogeek.com OR site:9to5linux.com today"
+Search 2: "site:arstechnica.com OR site:theregister.com today"
+Search 3: "site:bleepingcomputer.com OR site:howtogeek.com today"
+Search 4: "site:9to5linux.com OR site:news.ycombinator.com today"
 ```
 
 - Set `count: 5` per search
@@ -71,16 +71,20 @@ Use `firecrawl_scrape` on that specific URL only — do not bulk scrape.
 
 ## Output format
 
+Each story includes the original English headline + summary, followed by a Vietnamese translation.
+
 ```
 # 📰 Tech News — [Today's Date]
 
 ## 🤖 AI & Machine Learning
-- **[Headline]** — [1 sentence summary] ([Source](URL))
-- ...
+- **[Original English Headline]** — [1 sentence summary in English]
+  🇻🇳 **[Tiêu đề tiếng Việt]** — [1 câu tóm tắt tiếng Việt]
+  ([Source](URL))
 
 ## 📱 Mobile & Devices
-- **[Headline]** — [1 sentence summary] ([Source](URL))
-- ...
+- **[Original English Headline]** — [1 sentence summary in English]
+  🇻🇳 **[Tiêu đề tiếng Việt]** — [1 câu tóm tắt tiếng Việt]
+  ([Source](URL))
 
 ## 💻 Software & Apps
 - ...
@@ -98,7 +102,7 @@ Use `firecrawl_scrape` on that specific URL only — do not bulk scrape.
 - ...
 
 ---
-*Sources: 9to5Google, 9to5Linux, 9to5Mac, Engadget, How-To Geek, Android Central, TechCrunch, The Verge*
+*Sources: 9to5Google, 9to5Mac, 9to5Linux, Ars Technica, Hacker News, How-To Geek, BleepingComputer, The Register*
 ```
 
 ## Rules
