@@ -71,35 +71,39 @@ Use `firecrawl_scrape` on that specific URL only — do not bulk scrape.
 
 ## Output format
 
-Each story includes the original English headline + summary, followed by a Vietnamese translation.
+Each story shows English first, then Vietnamese translation clearly separated below.
 
 ```
 # 📰 Tech News — [Today's Date]
 
 ## 🤖 AI & Machine Learning
-- **[Original English Headline]** — [1 sentence summary in English]
-  🇻🇳 **[Tiêu đề tiếng Việt]** — [1 câu tóm tắt tiếng Việt]
-  ([Source](URL))
+
+**[Original English Headline]**
+[1 sentence summary in English] — ([Source](URL))
+> [Tiêu đề tiếng Việt]
+> [1 câu tóm tắt tiếng Việt]
 
 ## 📱 Mobile & Devices
-- **[Original English Headline]** — [1 sentence summary in English]
-  🇻🇳 **[Tiêu đề tiếng Việt]** — [1 câu tóm tắt tiếng Việt]
-  ([Source](URL))
+
+**[Original English Headline]**
+[1 sentence summary in English] — ([Source](URL))
+> [Tiêu đề tiếng Việt]
+> [1 câu tóm tắt tiếng Việt]
 
 ## 💻 Software & Apps
-- ...
+...
 
 ## 🐧 Linux & Open Source
-- ...
+...
 
 ## 🏢 Big Tech
-- ...
+...
 
 ## 🔒 Security & Privacy
-- ...
+...
 
 ## 📌 Other
-- ...
+...
 
 ---
 *Sources: 9to5Google, 9to5Mac, 9to5Linux, Ars Technica, Hacker News, How-To Geek, BleepingComputer, The Register*
