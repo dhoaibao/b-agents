@@ -40,6 +40,7 @@ All 5 MCPs must be connected. Verify with `/mcp` in Claude Code.
 |---|---|---|
 | [`b-quick-search`](#b-quick-search) | brave-search | Quick one-call web lookup for current info |
 | [`b-news`](#b-news) | brave-search, firecrawl | Daily tech news digest |
+| [`b-sync`](#b-sync) | — | Sync skills from GitHub repo to any machine |
 
 ---
 
@@ -326,7 +327,11 @@ via firecrawl.
 Copy each skill folder into your Claude Code skills directory:
 
 ```bash
-cp -r b-plan b-docs b-research b-analyze b-debug b-feature b-quick-search b-news ~/.claude/skills/
+# Option A — manual copy
+cp -r b-plan b-docs b-research b-analyze b-debug b-feature b-quick-search b-news b-sync ~/.claude/skills/
+
+# Option B — use b-sync (recommended, keeps skills up to date automatically)
+git clone https://github.com/dhoaibao/b-agent-skills.git ~/.b-agent-skills && bash ~/.b-agent-skills/sync.sh
 ```
 
 Verify all MCPs are connected:

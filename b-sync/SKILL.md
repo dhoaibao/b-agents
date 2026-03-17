@@ -5,20 +5,21 @@ description: Sync, update, or bootstrap Claude skills from the b-agent-skills Gi
 
 # b-sync
 
-Syncs Claude skills from the private `b-agent-skills` GitHub repo to `~/.claude/skills/` using git + SSH. No extra tools required — just `git` and `ssh`.
+Syncs Claude skills from the public `b-agent-skills` GitHub repo to `~/.claude/skills/` using git + HTTPS. No extra tools required — just `git`.
 
 ## How it works
 
 - `~/.b-agent-skills/` — local clone of the repo (source of truth)
 - `~/.claude/skills/<skill-name>` — symlinks pointing into the clone
 - Updating = `git pull` → symlinks stay valid automatically
+- Stale symlinks (skills removed from repo) are cleaned up automatically on each sync
 
 ## Commands
 
 ### Bootstrap a new machine (first time only)
 
 ```bash
-git clone git@github-personal.com:dhoabao/b-agent-skills.git ~/.b-agent-skills && bash ~/.b-agent-skills/sync.sh
+git clone https://github.com/dhoaibao/b-agent-skills.git ~/.b-agent-skills && bash ~/.b-agent-skills/sync.sh
 ```
 
 ### Sync / update skills (everyday use)
@@ -37,6 +38,7 @@ This will:
 - Pulls latest from `main`
 - Scans all root-level folders in the repo
 - Symlinks folders that contain a `SKILL.md` into `~/.claude/skills/`
+- Removes stale symlinks for skills deleted from the repo
 - Skips anything without a `SKILL.md` (e.g. `sync.sh` itself, `README.md`)
 - Safe to re-run anytime — idempotent
 
@@ -51,6 +53,6 @@ This will:
 
 | Problem | Fix |
 |---|---|
-| `Permission denied (publickey)` | SSH key not configured for GitHub — check your SSH setup manually |
+| `Permission denied` | Check your network or GitHub token if repo requires auth |
 | Skill not showing in Claude Code | Check folder has `SKILL.md` with valid `name` + `description` frontmatter |
 | Symlink broken | Re-run `sync.sh` to refresh |
