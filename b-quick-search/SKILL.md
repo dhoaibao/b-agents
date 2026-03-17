@@ -1,53 +1,92 @@
 ---
 name: b-quick-search
 description: >
-  Use Brave Search MCP to find current, up-to-date information from the web.
-  ALWAYS use this skill when the user asks to "search", "tìm kiếm", "search the web",
-  "find latest", "tìm mới nhất", or any query that requires current/recent information
-  beyond training data — such as latest releases, recent news, current prices, recent
-  changelogs, or anything where freshness matters. Trigger even if the user doesn't
-  explicitly say "brave search". When in doubt about whether info might be outdated, use this skill.
+  Use Brave Search MCP to get a fast, cited answer from the live web in a single
+  search call — no scraping, no deep synthesis.
+  ALWAYS use this skill when the user asks to "search", "tìm kiếm", "look up",
+  "tìm nhanh", "find latest", "tìm mới nhất", "what is the latest version of X",
+  "recent news about X", or any query that needs a quick current-info lookup:
+  latest releases, current prices, recent changelogs, CVEs, or anything where
+  freshness matters and a fast answer is enough.
+  Use b-research instead when the user wants depth, comparison, or a full report.
+  When in doubt between the two: if one search call can answer it → use this skill.
+  If the answer requires reading multiple full pages → use b-research.
 ---
 
 # b-quick-search
 
-Uses the `brave-search` MCP server to fetch live web results and return a clean, cited summary.
+Single-call web lookup via Brave Search. Fast, cited, no scraping.
+The rule is simple: one search call, one clean answer.
 
 ## When to use
 
-- User says: "search", "tìm", "tìm kiếm", "search the web", "find", "look up"
-- User asks about: latest versions, recent news, current prices, new releases, recent changelogs
-- Any question where training data might be stale (packages, APIs, CVEs, tools)
-- User explicitly says `/b-quick-search` or "use brave search"
+- User says: "search", "tìm", "look up", "find", "tìm nhanh", "latest X", "current X"
+- Queries about: latest versions, recent news, current prices, new releases, CVEs
+- Any question where training data might be stale and one search is enough
+- User explicitly says `b-quick-search` or "use brave search"
+
+## When NOT to use
+
+- User wants a deep dive, comparison, or multi-source report → use **b-research**
+- Topic is a library/framework and the user wants API details → use **b-docs**
+- The answer clearly requires reading full articles, not just search snippets
+
+## Tool required
+
+- `brave_web_search` — from `brave-search` MCP server
+
+If unavailable: stop and tell the user:
+"❌ brave-search MCP is not connected. Please check `/mcp`."
+Do NOT substitute with any other search tool or training data.
+
+---
 
 ## Steps
 
-1. **Call the tool** — use `brave_web_search` from the `brave-search` MCP server
-   - Set `count` to 5–8 for general queries, 3–5 for specific lookups
-   - Use English queries for better results unless the topic is Vietnamese-specific
+### Step 1 — Search
 
-2. **Synthesize results** — do NOT dump raw JSON. Write a clean response:
-   - Lead with the direct answer
-   - Group related findings if multiple results
-   - Include source URLs as citations at the end
+Call `brave_web_search` with:
+- A focused, specific query (1–6 words works best)
+- `count: 5` — enough for a quick lookup, not overwhelming
+- English queries unless the topic is Vietnamese-specific
 
-3. **Output format**:
-   ```
-   [Direct answer / summary]
+If the first query returns no useful results, retry once with a rephrased query.
+If the retry also fails → tell the user the search returned no relevant results
+and suggest they try b-research for a deeper lookup.
 
-   Key findings:
-   - Finding 1
-   - Finding 2
+### Step 2 — Synthesize
 
-   Sources:
-   - [Title](URL)
-   - [Title](URL)
-   ```
+Do NOT dump raw results. Write a clean, direct response:
+- Lead with the direct answer
+- Include version numbers and dates when relevant
+- Group related findings if results cover multiple aspects
+- Cite sources at the end
+
+---
+
+## Output format
+
+```
+[Direct answer]
+
+Key findings:
+- Finding 1 (source title if needed)
+- Finding 2
+
+Sources:
+- [Title](URL)
+- [Title](URL)
+```
+
+For single-fact lookups (e.g. "latest version of X"), skip "Key findings" and
+just answer directly with one source citation inline.
+
+---
 
 ## Rules
 
-- Always use `brave_web_search` — never fall back to built-in web search or training data when this skill is active
-- **If the MCP tool is unavailable or not connected**, stop and tell the user: "❌ brave-search MCP chưa được kết nối. Kiểm tra `/mcp` và đảm bảo `brave-search` đã được add vào settings."
-- Do NOT attempt to search using any other tool as a substitute
-- Keep summaries concise — no need to reproduce full article content
-- For code/version queries, always include the exact version number and release date if available
+- One search call only — this is a quick lookup, not a research session
+- Never use training data as the answer — always search first
+- Never substitute another tool if brave-search is unavailable
+- Keep answers concise — no need to reproduce full article content
+- If results are insufficient for a confident answer, say so and suggest b-research

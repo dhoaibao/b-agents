@@ -1,18 +1,20 @@
 ---
 name: b-research
 description: >
-  Deep research by combining Brave Search + Firecrawl scraping to get full page content.
+  Deep research by combining Brave Search + Firecrawl scraping to get full page content,
+  with optional Context7 lookup for library/framework topics.
   ALWAYS use this skill when the user asks to "research", "tìm hiểu sâu", "deep dive",
-  "so sánh", "compare", "tổng hợp thông tin về", or any query that needs more than
-  search snippets — such as evaluating tools, understanding concepts deeply, comparing
-  options, or producing a comprehensive report. Prefer this over b-search when the user
-  wants depth, not just a quick answer.
+  "so sánh", "compare", "tổng hợp thông tin về", "tìm hiểu", "viết report về", or any
+  query that needs more than search snippets — such as evaluating tools, understanding
+  concepts deeply, comparing options, or producing a comprehensive report.
+  Prefer this over b-search when the user wants depth, not just a quick answer.
 ---
 
 # b-research
 
-Deep research workflow: search for relevant URLs via Brave Search, scrape full content
-via Firecrawl, then synthesize into a comprehensive report with citations.
+Deep research workflow: optionally fetch versioned docs via Context7 (for library/framework
+topics), search for relevant URLs via Brave Search, scrape full content via Firecrawl,
+then synthesize into a comprehensive report with citations.
 
 ## When to use
 
@@ -25,30 +27,69 @@ via Firecrawl, then synthesize into a comprehensive report with citations.
 
 - `brave_web_search` — from `brave-search` MCP server
 - `firecrawl_scrape` — from `firecrawl` MCP server
+- `resolve-library-id` + `get-library-docs` — from `context7` MCP server *(optional, for library/framework topics)*
 
-If either tool is unavailable, stop and tell the user:
+If brave-search or firecrawl is unavailable, stop and tell the user:
 - brave-search missing: "❌ brave-search MCP is not connected. Please check `/mcp`."
 - firecrawl missing: "❌ firecrawl MCP is not connected. Please check `/mcp`."
 
-Do NOT fall back to built-in web search or training data.
+If context7 is unavailable on a library/framework topic, skip Step 1 silently and continue with Step 2.
+
+---
 
 ## Steps
 
-### 1. Search
+### Step 0 — Classify the topic
+
+Before searching, determine: **is this topic a library, framework, SDK, or specific tool?**
+
+Examples that qualify: `SendGrid SDK`, `BullMQ`, `Prisma`, `React Query`, `AWS SES SDK`, `Express.js`, `Zod`
+
+Examples that do NOT qualify: `best practices for error handling`, `compare SaaS pricing models`, `history of REST APIs`
+
+**If YES → run Step 1 before Step 2.**
+**If NO → skip to Step 2.**
+
+---
+
+### Step 1 — Context7 lookup *(library/framework topics only)*
+
+Use `resolve-library-id` to find the correct Context7 library ID, then `get-library-docs` to fetch version-accurate documentation.
+
+- Set `topic` to the specific feature or API area relevant to the user's question
+- Fetch enough tokens to cover the relevant API surface (default: 8000–12000 tokens)
+- If `resolve-library-id` returns no match → skip this step, note it in the report
+- **Do not use Context7 output as the sole source** — it provides API accuracy; web sources provide real-world usage, comparisons, and community feedback
+
+---
+
+### Step 2 — Search
+
 - Use `brave_web_search` with a focused English query (unless topic is Vietnamese-specific)
 - Fetch 5–8 results
 - Pick the **3–5 most relevant URLs** — prioritize official docs, authoritative blogs, recent articles
+- If Context7 already covered official docs well in Step 1, deprioritize official doc URLs here and favor community/comparison sources instead
 
-### 2. Scrape
+---
+
+### Step 3 — Scrape
+
 - Call `firecrawl_scrape` on each selected URL
 - Use `formats: ["markdown"]` to get clean content
-- If a page fails to scrape, skip it and note it in the report
+- **Fallback for JS-heavy pages** (SPAs, dashboards, React-rendered docs): if firecrawl returns empty content or <200 words, retry once with `waitFor: 3000`. If still empty, skip and note in report as "could not scrape — JS-rendered page".
+- If a page returns a rate-limit or 403, skip it and note in report
+- Max 5 URLs scraped per session to avoid excessive tool calls
 
-### 3. Synthesize
-- Read the scraped content carefully
+---
+
+### Step 4 — Synthesize
+
+- Read all sources (Context7 output + scraped content) carefully
 - Answer the user's specific question based on actual content — not training data
-- Produce a structured report (see output format below)
 - If sources conflict, note the disagreement explicitly
+- Produce a structured report (see output format below)
+
+---
 
 ## Output format
 
@@ -68,13 +109,17 @@ Do NOT fall back to built-in web search or training data.
 
 ### Sources
 - [Page Title](URL) — [one line on what this source contributed]
-- [Page Title](URL) — ...
+- Context7 (`library-name`) — versioned API reference for [specific feature]
 ```
+
+---
 
 ## Rules
 
 - Always scrape — never rely on search snippets alone
-- Max 5 URLs to scrape per research session (to avoid excessive tool calls)
-- Cite every claim with its source URL
+- For library/framework topics: always attempt Context7 before scraping
+- Max 5 URLs to scrape per research session
+- Cite every claim with its source URL or "Context7 (`library-name`)"
 - If the user asks a specific question, answer it directly in the Summary before going into detail
 - Keep the report focused — omit irrelevant scraped content
+- Note any sources that failed to scrape so the user can check manually

@@ -1,0 +1,173 @@
+---
+name: b-analyze
+description: >
+  Deep code analysis using jcodemunch — map structure, measure complexity, find
+  duplicate logic, and produce actionable improvement suggestions.
+  ALWAYS use this skill when the user says "analyze", "review this code", "phân tích",
+  "code review", "refactor", "dọn dẹp code", "tìm code smell", "cải thiện code",
+  "tái cấu trúc", "làm sao cải thiện", or when asked to understand an unfamiliar
+  codebase before making changes. Also use before any significant refactor to establish
+  a baseline. Distinct from b-debug — use b-analyze when there is no bug to fix,
+  only code to understand or improve.
+---
+
+# b-analyze
+
+Understand code before changing it. Use jcodemunch to map structure, measure quality,
+and surface concrete improvements — not vague suggestions.
+
+## When to use
+
+- Before a refactor: understand what exists before changing it
+- Code review: assess quality, consistency, and maintainability
+- Onboarding to an unfamiliar codebase or module
+- Identifying duplicate logic, high-complexity hotspots, or inconsistent patterns
+- User says: "analyze", "review", "phân tích code", "refactor", "tìm code smell"
+
+**Difference from b-debug**: b-analyze is for code that works but could be better.
+b-debug is for code that is broken. If there's an error message → use b-debug instead.
+
+## Tools required
+
+- `munch_code` (or equivalent) — from `jcodemunch` MCP server
+
+If jcodemunch is unavailable: read files manually, reason about structure inline.
+Note the limitation — manual reading may miss cross-file dependencies.
+
+---
+
+## Steps
+
+### Step 1 — Define analysis scope
+
+Clarify what to analyze and why:
+
+- **Target**: specific file, directory, module, or layer (e.g. "the service layer", "all route handlers")
+- **Goal**: what decision will this analysis inform? (refactor, code review, onboarding, pre-feature audit)
+- **Depth**: quick overview vs deep structural analysis
+
+If the user says "analyze the whole project" without further context, ask which layer or
+concern matters most — analyzing everything produces noise.
+
+---
+
+### Step 2 — Structural analysis
+
+Use `jcodemunch` to map the target code:
+
+- **Call graph**: what calls what, entry points, leaf functions
+- **Dependency map**: which modules depend on which, circular dependencies
+- **File/module boundaries**: what's responsible for what
+- **Size distribution**: unusually large files or functions are complexity hotspots
+
+Goal: build a mental model of the code's shape before evaluating its quality.
+
+---
+
+### Step 3 — Quality analysis
+
+With the structure mapped, evaluate:
+
+**Complexity**
+- Functions or methods with high cyclomatic complexity (flag anything >10)
+- Deeply nested conditionals or loops
+- Long functions that do more than one thing
+
+**Duplication**
+- Similar logic appearing in multiple places
+- Copy-pasted error handling, validation, or transformation code
+- Inconsistent patterns for the same concern (e.g. 3 different ways to handle errors)
+
+**Cohesion & coupling**
+- Modules that know too much about each other
+- Single files/classes doing too many unrelated things
+- Cross-layer violations (e.g. DB queries inside route handlers)
+
+**Maintainability signals**
+- Missing or misleading names (variables, functions, files)
+- Magic numbers or hardcoded values that should be constants
+- Dead code — functions defined but never called
+
+---
+
+### Step 4 — Produce findings
+
+Organize findings by severity:
+
+- **🔴 High**: causes maintenance burden now, or will cause bugs soon (circular deps, very high complexity, cross-layer violations)
+- **🟡 Medium**: technical debt that slows down development (duplication, inconsistent patterns, large functions)
+- **🟢 Low**: nice-to-have improvements (naming, minor reorganization)
+
+For each finding:
+- State exactly what was found and where (file, function, line range if relevant)
+- Explain why it's a problem — not just "this is bad"
+- Suggest a concrete improvement — not just "refactor this"
+
+---
+
+### Step 5 — Recommend next actions
+
+Based on findings, suggest:
+
+- If refactor is needed → hand off to `b-plan` to sequence the refactor safely
+- If a specific pattern is broken → flag which functions need fixing and in what order
+- If complexity is concentrated in one area → suggest splitting it first before any other changes
+- If findings are minor → list them as a backlog, not urgent action
+
+---
+
+## Output format
+
+```
+### Analysis: [target — file, module, or layer]
+
+**Scope**: [what was analyzed]
+**Goal**: [what decision this informs]
+
+---
+
+**Structure overview**
+[Call graph or module map — brief, not exhaustive]
+[Key entry points, main dependencies]
+
+---
+
+**Findings**
+
+🔴 High priority
+- [Finding]: [where] — [why it's a problem] → [concrete suggestion]
+
+🟡 Medium priority
+- [Finding]: [where] — [why it's a problem] → [concrete suggestion]
+
+🟢 Low priority
+- [Finding]: [where] — [suggestion]
+
+---
+
+**Metrics snapshot**
+- Highest complexity: `[function]` — cyclomatic complexity [N]
+- Largest file: `[file]` — [N] lines
+- Duplication detected: [yes/no — where]
+- Circular dependencies: [yes/no — which]
+
+---
+
+**Recommended next steps**
+1. [Most impactful action first]
+2. ...
+
+*Use `b-plan` to sequence the refactor if proceeding.*
+```
+
+---
+
+## Rules
+
+- Never suggest a refactor without first understanding the full structure — partial analysis leads to wrong recommendations
+- Findings must be specific: file + function + reason, not "this module is messy"
+- Every High finding must have a concrete suggestion, not just a complaint
+- Don't fix anything during analysis — this skill produces findings, not changes
+- If analysis reveals a bug (broken logic, not just poor style) → note it and suggest switching to `b-debug`
+- Keep Low findings in the report but don't let them dominate — focus on what actually matters
+- After outputting findings, always recommend whether to proceed with `b-plan` or if the code is healthy enough to modify directly

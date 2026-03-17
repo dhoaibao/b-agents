@@ -1,0 +1,145 @@
+---
+name: b-docs
+description: >
+  Fetch live, version-accurate documentation from Context7 before implementing anything
+  that involves a library, SDK, framework, or third-party tool.
+  ALWAYS use this skill when the user mentions a specific library or package by name
+  (e.g. SendGrid, BullMQ, Prisma, Zod, Express, AWS SES, Mailgun, Stripe, Axios),
+  asks "how to use X", "X API", "X method", "does X support Y", or before writing
+  any integration code. Use this even when you think you already know the API —
+  training data may be outdated. Never implement library code from memory alone.
+---
+
+# b-docs
+
+Fetch versioned, accurate documentation from Context7 before writing any library or
+SDK code. Prevents hallucinated APIs, wrong method signatures, and version mismatches.
+
+## When to use
+
+- User asks how to use a specific library, SDK, or framework feature
+- User is about to implement integration with a third-party service (SendGrid, Mailgun, AWS SES, Stripe, etc.)
+- User asks "does X support Y?", "what's the API for X?", "how to configure X?"
+- Before implementing ANY code that calls an external library — even familiar ones
+- When context says the project uses a specific version (e.g. `sendgrid@8`, `bullmq@5`)
+
+## Tools required
+
+- `resolve-library-id` — from `context7` MCP server
+- `get-library-docs` — from `context7` MCP server
+
+If context7 is unavailable:
+- Tell the user: "❌ context7 MCP is not connected. Please check `/mcp`."
+- Do NOT fall back to training data for API details — offer to use `b-research` to scrape official docs instead.
+
+---
+
+## Steps
+
+### Step 1 — Identify library and topic
+
+Extract from the user's request:
+- **Library name**: e.g. `sendgrid`, `bullmq`, `@aws-sdk/client-ses`
+- **Topic / feature**: the specific API area needed, e.g. `send email`, `webhook verification`, `retry configuration`, `job scheduling`
+- **Version** (if mentioned in conversation or package.json): e.g. `v8`, `v5`
+
+If multiple libraries are involved (e.g. "integrate Mailgun with Express"), run Steps 2–3 for each library separately.
+
+---
+
+### Step 2 — Resolve library ID
+
+Call `resolve-library-id` with the library name.
+
+- If multiple results return, pick the one with the highest match and correct scope (e.g. prefer `@sendgrid/mail` over a community fork)
+- If no result found: tell the user "⚠️ context7 has no index for `[library]`. Falling back to b-research to scrape official docs." then invoke b-research workflow
+
+---
+
+### Step 3 — Fetch docs
+
+Call `get-library-docs` with:
+- The resolved library ID from Step 2
+- `topic`: the specific feature area (keep focused — don't fetch entire docs)
+- `tokens`: 8000 for simple APIs, 12000–15000 for complex ones (auth flows, multi-method APIs, SDK setup)
+
+Repeat with a different `topic` if the user's task spans multiple API areas (e.g. "send email" AND "handle bounce webhooks" — fetch both).
+
+---
+
+### Step 4 — Extract and present
+
+From the fetched docs, extract only what's needed for the user's task:
+
+- Correct method names and signatures
+- Required vs optional parameters
+- Authentication setup (especially if it changed between versions)
+- Error codes and exception types
+- Any deprecation notices or breaking changes relevant to the user's version
+
+**Do not dump the entire docs.** Summarize the relevant section, show the key API surface, then implement or answer the user's question based on that.
+
+---
+
+### Step 5 — Implement with confidence
+
+Now write the code, knowing the API is accurate for the current version.
+
+- Reference the fetched doc in a brief comment if the API is non-obvious: `// per Context7: sendgrid v8 uses dynamic templates, not legacy templates`
+- If the docs reveal a caveat or version difference from what you expected, call it out explicitly before the code
+
+---
+
+## Output format
+
+For a lookup-only request ("how does X work?"):
+
+```
+### `[LibraryName]` — [feature/topic]
+*(Context7 — [library-id], [version if available])*
+
+[2–3 sentence summary of the API]
+
+**Key methods:**
+- `method(params)` — what it does
+- ...
+
+**Example:**
+\`\`\`js
+// minimal working example based on fetched docs
+\`\`\`
+
+**Notes:**
+- Any gotchas, deprecations, or version differences found in docs
+```
+
+For an implementation request ("implement X using Y"):
+
+- Skip the lookup-only format
+- Write the implementation directly, informed by the fetched docs
+- Add a one-line comment citing Context7 on any non-obvious API call
+
+---
+
+## Topic query tips
+
+Keep the `topic` param focused — a narrow topic returns the right section faster:
+
+| Instead of | Use |
+|---|---|
+| `"email"` | `"send email with attachments"` |
+| `"authentication"` | `"API key setup"` or `"OAuth flow"` |
+| `"errors"` | `"error codes and exception types"` |
+| `"setup"` | `"installation and configuration"` |
+
+When the task spans multiple areas, run `get-library-docs` once per topic rather than one broad fetch.
+
+---
+
+## Rules
+
+- Never implement library code from training data alone — always fetch first
+- If context7 returns docs for a different major version than the project uses, flag it explicitly: "⚠️ Context7 returned docs for v3 but your package.json shows v8 — API may differ"
+- Keep topic queries focused — broad topic = too much noise, wrong section fetched
+- If docs are sparse or unhelpful, escalate to `b-research` to scrape official docs directly
+- One `get-library-docs` call per distinct API area — don't batch unrelated topics in one fetch

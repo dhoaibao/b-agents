@@ -9,111 +9,116 @@ description: >
 
 # b-news
 
-Aggregates today's top tech news from 8 curated sources using Brave Search,
-then groups stories by topic/category into a clean daily digest.
+Aggregates today's top tech news from curated sources using Brave Search,
+then groups stories by topic into a clean bilingual daily digest.
 
 ## Tools required
 
 - `brave_web_search` — from `brave-search` MCP server (required)
-- `firecrawl_scrape` — from `firecrawl` MCP server (optional, for detail)
+- `firecrawl_scrape` — from `firecrawl` MCP server (optional, for detail on demand)
 
 If `brave-search` is unavailable, stop and tell the user:
 "❌ brave-search MCP is not connected. Please check `/mcp`."
 
-## Sources
+## Curated sources
 
-| Source | Domain | Focus |
+Results from these domains are preferred over generic tech blogs:
+
+| Source | Domain | Strength |
 |---|---|---|
+| Ars Technica | arstechnica.com | Deep tech + science reporting |
 | 9to5Google | 9to5google.com | Android, Google, Pixel |
 | 9to5Mac | 9to5mac.com | Apple, iOS, Mac |
 | 9to5Linux | 9to5linux.com | Linux, open source |
-| Ars Technica | arstechnica.com | Tech + Science |
-| Hacker News | news.ycombinator.com | Community-curated |
-| How-To Geek | howtogeek.com | Software, Windows, Linux |
-| BleepingComputer | bleepingcomputer.com | Security, malware |
+| BleepingComputer | bleepingcomputer.com | Security, malware, CVEs |
 | The Register | theregister.com | Enterprise tech |
+| How-To Geek | howtogeek.com | Software, Windows, tools |
+| Hacker News | news.ycombinator.com | Community top stories |
+
+---
 
 ## Steps
 
-### 1. Search headlines from all 8 sources
+### Step 1 — Search by topic category
 
-Run **4 parallel searches** (group sources to reduce tool calls):
+Run **5 sequential searches**, one per major topic area.
+Use topic-based queries — do NOT use `site:` or boolean `OR` operators,
+as these are unreliable in Brave Search MCP.
 
 ```
-Search 1: "site:9to5google.com OR site:9to5mac.com today"
-Search 2: "site:arstechnica.com OR site:theregister.com today"
-Search 3: "site:bleepingcomputer.com OR site:howtogeek.com today"
-Search 4: "site:9to5linux.com OR site:news.ycombinator.com today"
+Search 1: "AI machine learning news [current month year]"
+Search 2: "security vulnerability breach [current month year]"
+Search 3: "Apple Google Microsoft product news [current month year]"
+Search 4: "Linux open source release [current month year]"
+Search 5: "Hacker News top stories today"
 ```
 
 - Set `count: 5` per search
-- Focus on results from today or the last 24 hours
-- Collect all headlines + URLs + brief snippets
+- Replace `[current month year]` with the actual current month and year (e.g. "March 2026")
+- After getting results, prefer stories from the curated source list above
+  over generic tech blogs — but do not discard good stories from other sources
+- Collect: headline, URL, 1-sentence snippet per story
 
-### 2. Categorize stories
+### Step 2 — Deduplicate and categorize
 
-Group collected stories into categories:
+From all collected results (~25 stories), filter and group:
 
-- **AI & Machine Learning** — LLMs, AI tools, model releases
-- **Mobile & Devices** — phones, tablets, wearables
-- **Software & Apps** — OS updates, app releases, browser news
-- **Linux & Open Source** — distro releases, open source projects
-- **Big Tech** — Google, Apple, Meta, Microsoft, Amazon news
-- **Security & Privacy** — vulnerabilities, data breaches, policies
-- **Other** — anything that doesn't fit above
+- **Discard**: duplicates covering the same event (keep the best source), opinion
+  pieces, sponsored content, listicles ("10 best..."), and stories older than 48 hours
+- **Group** into categories (omit any category with no stories):
+  - 🤖 AI & Machine Learning
+  - 🔒 Security & Privacy
+  - 📱 Mobile & Devices
+  - 💻 Software & Apps
+  - 🐧 Linux & Open Source
+  - 🏢 Big Tech
+  - 📌 Other
 
-Discard duplicate stories covering the same event — keep the best source.
+Target: **3 stories per category max** — quality over quantity.
 
-### 3. Scrape for detail (optional)
+### Step 3 — Scrape for detail (on demand only)
 
-Only scrape if the user asks to "đọc thêm về..." or "chi tiết về..." a specific story.
-Use `firecrawl_scrape` on that specific URL only — do not bulk scrape.
+Only if the user follows up with "đọc thêm về..." or "chi tiết về..." a specific story:
+call `firecrawl_scrape` on that one URL. Do not bulk scrape during the initial digest.
+
+---
 
 ## Output format
 
-Each story shows English first, then Vietnamese translation clearly separated below.
+Each story: English headline + 1-sentence English summary + source link,
+followed by Vietnamese translation on the next line.
 
 ```
 # 📰 Tech News — [Today's Date]
 
 ## 🤖 AI & Machine Learning
 
-**[Original English Headline]**
-[1 sentence summary in English] — ([Source](URL))
-> [Tiêu đề tiếng Việt]
-> [1 câu tóm tắt tiếng Việt]
-
-## 📱 Mobile & Devices
-
-**[Original English Headline]**
-[1 sentence summary in English] — ([Source](URL))
-> [Tiêu đề tiếng Việt]
-> [1 câu tóm tắt tiếng Việt]
-
-## 💻 Software & Apps
-...
-
-## 🐧 Linux & Open Source
-...
-
-## 🏢 Big Tech
-...
+**[English Headline]**
+[1-sentence English summary] — ([Source Name](URL))
+> [Tiêu đề tiếng Việt] — [1 câu tóm tắt tiếng Việt]
 
 ## 🔒 Security & Privacy
-...
 
-## 📌 Other
-...
+**[English Headline]**
+[1-sentence English summary] — ([Source Name](URL))
+> [Tiêu đề tiếng Việt] — [1 câu tóm tắt tiếng Việt]
+
+[... remaining categories ...]
 
 ---
-*Sources: 9to5Google, 9to5Mac, 9to5Linux, Ars Technica, Hacker News, How-To Geek, BleepingComputer, The Register*
+*[N] stories · Sources searched: Ars Technica, 9to5Google, 9to5Mac, BleepingComputer,
+The Register, 9to5Linux, How-To Geek, Hacker News*
 ```
+
+---
 
 ## Rules
 
-- Always include today's date in the header
-- Max 5 stories per category — prioritize most impactful/interesting
-- Each story: headline + 1 sentence summary + source link
-- Skip opinion pieces, listicles, and sponsored content when possible
-- If a category has no stories, omit it entirely
-- Do not bulk scrape — use search snippets for summaries
+- Always include today's actual date in the header
+- Always use the actual current month and year in search queries — "today" alone is unreliable
+- Run all 5 searches sequentially — no parallel calls
+- Never use `site:` operator or boolean `OR` in queries — use topic keywords instead
+- Max 3 stories per category — cut the weakest stories if more are found
+- Omit any category with no stories rather than padding with weak content
+- Do not scrape during digest generation — search snippets are sufficient for summaries
+- Vietnamese translations should be natural, not literal word-for-word

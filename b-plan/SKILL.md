@@ -1,116 +1,141 @@
 ---
 name: b-plan
 description: >
-  Create a detailed implementation plan for a feature or task, scan the codebase
-  for context, and write the result to .claude/b-plan/PLAN.md.
-  ALWAYS use this skill when the user says "lên plan", "plan for...", "tôi muốn build...",
-  "implement feature...", "tạo plan cho...", "how should I implement...", or any request
-  that involves planning before coding. Trigger even for medium-sized tasks where
-  understanding the existing codebase is important.
+  Decompose any non-trivial task into ordered steps, dependencies, and risks before
+  writing any code. ALWAYS use this skill when the user says "plan", "lên kế hoạch",
+  "thiết kế", "design", "how should I approach", "nên làm thế nào", "before I implement",
+  "trước khi code", or describes a task that touches more than 2 files or involves
+  multiple moving parts. Also use when the user is about to implement something complex
+  and hasn't explicitly asked for a plan — a plan first saves more time than it costs.
+  Never jump straight to implementation on complex tasks without running this skill first.
 ---
 
 # b-plan
 
-Creates a detailed implementation plan by combining codebase scanning (jcodemunch),
-library docs (context7), and structured reasoning (sequential-thinking).
-Writes the result to `.claude/b-plan/PLAN.md` for Claude Code to reference during implementation.
+Think before coding. Use sequential-thinking to decompose tasks into ordered steps,
+surface dependencies, identify risks, and produce a clear execution plan — before any
+implementation begins.
+
+## When to use
+
+- Task involves more than 2 files or multiple layers (API, DB, service, UI)
+- Task has unclear scope or multiple valid approaches
+- User is about to implement something non-trivial and hasn't thought through the order
+- Refactoring, architecture changes, or new feature integration
+- User says: "plan", "thiết kế", "how should I approach X", "lên kế hoạch", "nên bắt đầu từ đâu"
 
 ## Tools required
 
-- `jcodemunch` — scan codebase structure and symbols
-- `context7` — fetch up-to-date library docs
-- `sequential-thinking` — structured step-by-step reasoning
+- `sequential_thinking` — from `sequential-thinking` MCP server
 
-If `jcodemunch` is unavailable: "❌ jcodemunch MCP is not connected. Please check `/mcp`."
+If sequential-thinking is unavailable: reason through the plan inline step by step,
+making the thinking explicit in the response. Do not skip planning — just do it without the tool.
+
+---
 
 ## Steps
 
-### 1. Understand the task
-- Clarify what needs to be built if the request is ambiguous
-- Identify the libraries/frameworks involved
+### Step 1 — Clarify scope
 
-### 2. Scan the codebase (jcodemunch)
-Run in this order — stop when you have enough context:
+Before planning, confirm:
+
+- **What is the end state?** What does "done" look like exactly?
+- **What already exists?** Is this greenfield or modifying existing code?
+- **What are the constraints?** Deadlines, must-not-break areas, tech stack limits?
+
+If the task description is ambiguous, ask one focused question to clarify — not multiple.
+Once scope is clear, proceed.
+
+---
+
+### Step 2 — Decompose with sequential-thinking
+
+Use `sequential-thinking` to break the task into atomic steps:
+
+- Each step should be independently executable and verifiable
+- Steps should be ordered by dependency — a step cannot start until its prerequisites are done
+- Aim for 4–8 steps for most tasks; more than 10 suggests the task should be split into sub-tasks
+- Each step should answer: *what to do*, *why at this point*, and *how to verify it's done*
+
+Think through:
+- **Happy path**: the sequence of steps assuming everything works
+- **Dependencies**: which steps block others, which can run in parallel
+- **Risks**: where things are most likely to go wrong, and what the fallback is
+
+---
+
+### Step 3 — Identify unknowns
+
+Flag anything that needs to be resolved before or during execution:
+
+- **Docs needed**: library/API behavior that needs verification → mark as `b-docs` call
+- **Research needed**: tool or approach comparison → mark as `b-research` call
+- **Decisions needed**: choices that depend on user preference or business logic
+- **Assumptions**: things the plan assumes to be true — state them explicitly
+
+An unresolved unknown is a risk. Surface it now, not halfway through implementation.
+
+---
+
+### Step 4 — Output the plan
+
+Present the plan clearly. Get confirmation from the user before proceeding to implementation.
+
+If the user says "looks good" or equivalent → begin execution step by step, checking off
+each step as it's completed.
+
+If the user requests changes → revise the plan before starting.
+
+---
+
+## Output format
 
 ```
-1. list_repos          → check if project is indexed
-   - if not indexed: index_folder with current directory first
-2. get_repo_outline    → understand overall structure
-3. get_file_tree       → find relevant directories
-4. search_symbols      → find existing patterns related to the task
-5. get_symbol          → get full source of key symbols (only if needed)
-```
+### Plan: [task name]
 
-Focus on:
-- Existing patterns similar to what needs to be built
-- Naming conventions (files, functions, classes, variables)
-- Related files that will be affected
-- Potential conflicts or duplicates
+**Scope**: [one sentence — what this plan covers]
+**End state**: [what "done" looks like]
 
-### 3. Fetch library docs (context7)
-- Identify libraries the implementation will use
-- Fetch relevant docs sections for APIs that will be called
-- Note the correct version-specific usage
+**Steps**
 
-### 4. Plan with sequential-thinking
-Use `sequential-thinking` to reason through:
-- Break the task into ordered implementation steps
-- Estimate complexity per step (S/M/L)
-- Identify risks and dependencies between steps
-- Determine what to build first
+1. [Step name]
+   - What: ...
+   - Why now: ...
+   - Done when: ...
 
-### 5. Write PLAN.md
+2. [Step name]
+   - What: ...
+   - Why now: ...
+   - Done when: ...
 
-Create `.claude/b-plan/PLAN.md` with the following structure:
-
-```markdown
-# Plan: [Task Name]
-_Generated: [date]_
-
-## Objective
-[1-2 sentences describing what will be built and why]
-
-## Codebase Context
-### Relevant Files
-- `path/to/file.ts` — [what it does, why it's relevant]
-- ...
-
-### Existing Patterns to Follow
-- [pattern name]: [brief description + example file]
-- ...
-
-### Naming Conventions
-- Files: [e.g. kebab-case]
-- Functions: [e.g. camelCase]
-- Components: [e.g. PascalCase]
-
-### Potential Conflicts
-- [file or symbol that might conflict, and why]
-
-## Architecture
-[Text description of how the feature fits into the existing system]
-[Include data flow if relevant]
-
-## Implementation Steps
-- [ ] Step 1: [description] — complexity: S/M/L
-- [ ] Step 2: [description] — complexity: S/M/L
-- [ ] Step 3: [description] — complexity: S/M/L
 ...
 
-## Library APIs to Use
-- `[lib]`: [specific function/method] — [what it does]
+**Dependencies**
+- Step 3 requires Step 1 to be complete
+- Steps 4 and 5 can run in parallel
 - ...
 
-## Risks & Notes
-- [risk or important note]
+**Risks**
+- [Risk]: [mitigation or fallback]
 - ...
+
+**Unknowns** *(resolve before starting)*
+- Need b-docs: [library] — [what to verify]
+- Need decision: [question for user]
+- Assuming: [assumption that may not hold]
+
+---
+Ready to proceed? Or would you like to adjust anything?
 ```
+
+---
 
 ## Rules
 
-- Always index the project first if not already indexed in jcodemunch
-- Scan codebase BEFORE writing any plan — never plan without context
-- Keep PLAN.md concise — implementation steps should be actionable, not vague
-- If `.claude/b-plan/` directory doesn't exist, create it before writing the file
-- After writing PLAN.md, tell the user: "✅ Plan written to `.claude/b-plan/PLAN.md`. Ready to implement."
-- Do NOT start implementing — planning and implementing are separate steps
+- Never start implementing before the plan is confirmed by the user
+- Steps must be ordered by dependency — wrong order causes cascading failures
+- Keep steps atomic — one clear action per step, not "implement the whole service layer"
+- If a step requires a b-docs or b-research call, mark it explicitly — don't fold it silently into implementation
+- Surface risks and assumptions proactively — a wrong assumption found at Step 1 is free; found at Step 7 it costs a rewrite
+- If the task turns out to require 10+ steps, split it into phases and plan one phase at a time
+- After execution begins, check off completed steps and re-evaluate remaining steps if something unexpected happened
