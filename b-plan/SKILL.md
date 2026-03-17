@@ -77,65 +77,87 @@ An unresolved unknown is a risk. Surface it now, not halfway through implementat
 
 ---
 
-### Step 4 — Output the plan
+### Step 4 — Write plan to file
 
-Present the plan clearly. Get confirmation from the user before proceeding to implementation.
+Once the plan is ready, write it to `.claude/b-plans/[task-slug].md` inside the **current project root** — not `~/.claude`. Each project has its own plans directory.
 
-If the user says "looks good" or equivalent → begin execution step by step, checking off
-each step as it's completed.
+- `task-slug` = kebab-case of the task name, e.g. `add-retry-logic`, `refactor-auth-module`
+- Create `.claude/b-plans/` if it doesn't exist
+- Show the file path to the user after writing
 
-If the user requests changes → revise the plan before starting.
+Then present a short summary in chat (scope + step count) and ask for confirmation.
+
+If the user requests changes → update the file, then confirm again.
+If the user confirms → do NOT execute in this session. Instead, print:
+
+```
+✅ Plan saved to .claude/b-plans/[task-slug].md
+
+Open a new session and run:
+  execute plan from .claude/b-plans/[task-slug].md
+```
+
+**Exception — simple tasks (≤4 steps, single file):** skip the file, plan and execute
+inline in the same session. Not worth the overhead.
 
 ---
 
-## Output format
+## Plan file format
 
-```
-### Plan: [task name]
+```markdown
+# Plan: [task name]
 
 **Scope**: [one sentence — what this plan covers]
 **End state**: [what "done" looks like]
+**Created**: [date]
 
-**Steps**
+---
 
-1. [Step name]
-   - What: ...
-   - Why now: ...
-   - Done when: ...
+## Steps
 
-2. [Step name]
-   - What: ...
-   - Why now: ...
-   - Done when: ...
+- [ ] 1. [Step name]
+  - What: ...
+  - Why now: ...
+  - Done when: ...
+
+- [ ] 2. [Step name]
+  - What: ...
+  - Why now: ...
+  - Done when: ...
 
 ...
 
-**Dependencies**
+## Dependencies
 - Step 3 requires Step 1 to be complete
 - Steps 4 and 5 can run in parallel
-- ...
 
-**Risks**
+## Risks
 - [Risk]: [mitigation or fallback]
-- ...
 
-**Unknowns** *(resolve before starting)*
+## Unknowns *(resolve before starting)*
 - Need b-docs: [library] — [what to verify]
 - Need decision: [question for user]
 - Assuming: [assumption that may not hold]
-
----
-Ready to proceed? Or would you like to adjust anything?
 ```
+
+## Execution (in a new session)
+
+When a new session opens with `execute plan from .claude/b-plans/[file].md`:
+
+1. Read the plan file
+2. Execute steps in order, checking off each `- [ ]` → `- [x]` as it completes
+3. Re-evaluate remaining steps if something unexpected happens mid-execution
+4. Update the file with final status when done
 
 ---
 
 ## Rules
 
-- Never start implementing before the plan is confirmed by the user
+- Always write to `.claude/b-plans/` — never output the plan only in chat for non-trivial tasks
+- Never execute in the same session as planning for tasks with 5+ steps — keep contexts clean
 - Steps must be ordered by dependency — wrong order causes cascading failures
 - Keep steps atomic — one clear action per step, not "implement the whole service layer"
-- If a step requires a b-docs or b-research call, mark it explicitly — don't fold it silently into implementation
+- If a step requires a b-docs or b-research call, mark it explicitly in the Unknowns section
 - Surface risks and assumptions proactively — a wrong assumption found at Step 1 is free; found at Step 7 it costs a rewrite
-- If the task turns out to require 10+ steps, split it into phases and plan one phase at a time
-- After execution begins, check off completed steps and re-evaluate remaining steps if something unexpected happened
+- If the task turns out to require 10+ steps, split it into phases — one plan file per phase
+- During execution, check off steps as completed and update the file in real time

@@ -43,24 +43,32 @@ If a required MCP is missing, note it and skip that step — do not abort the en
 
 ---
 
-## Pipeline
+## Two-session model
+
+b-feature runs across **two sessions** to keep planning context separate from
+execution context. Session 1 produces a plan file. Session 2 executes it.
 
 ```
-[Input] → PLAN → UNDERSTAND → GATHER → IMPLEMENT → REVIEW → [Output]
+Session 1: PLAN → UNDERSTAND → GATHER → write .claude/b-plans/[slug].md
+Session 2: read plan file → IMPLEMENT → REVIEW
 ```
 
-Each phase maps to one or more skills. Phases run in order. Some are conditional.
+Detect which session you are in:
+- **No plan file referenced** → Session 1 (planning mode)
+- **User says "execute plan from ..."** or references a plan file → Session 2 (execution mode)
 
 ---
+
+## Session 1 — Planning
 
 ### Phase 1 — PLAN `(b-plan)`
 
 Always run. No exceptions.
 
 Invoke `b-plan` to decompose the feature into ordered steps, surface dependencies,
-and identify unknowns. Do not proceed to Phase 2 until the plan is confirmed.
+and identify unknowns. Write the plan to `.claude/b-plans/[task-slug].md` in the
+current project root.
 
-**Gate**: user confirms the plan, or explicitly says "proceed" / "looks good".
 If the plan reveals the task is actually a bug fix → stop and switch to `b-debug`.
 
 ---
@@ -68,42 +76,55 @@ If the plan reveals the task is actually a bug fix → stop and switch to `b-deb
 ### Phase 2 — UNDERSTAND `(b-analyze)` *(conditional)*
 
 Run if: the feature modifies or extends existing code.
-Skip if: this is purely greenfield with no existing code to understand.
+Skip if: purely greenfield.
 
-Invoke `b-analyze` on the relevant existing modules before writing any new code.
-Goal: understand the current structure so the new code integrates cleanly,
-follows existing patterns, and doesn't break hidden dependencies.
-
-**Output fed into Phase 4**: findings from b-analyze inform implementation decisions.
+Invoke `b-analyze` on the relevant existing modules. Append findings as a
+`## Context` section to the plan file — they will inform implementation in Session 2.
 
 ---
 
 ### Phase 3 — GATHER *(conditional)*
 
-Run the appropriate sub-skill based on what the plan flagged as unknowns:
+Run based on unknowns flagged in Phase 1:
 
-**3a — `b-docs`** *(run if any library/SDK is involved)*
+**3a — `b-docs`** *(if any library/SDK is involved)*
 Fetch live docs for every external library the feature will use.
-Do not implement library calls without this step.
+Append a `## Docs` section to the plan file with key API notes.
 
-**3b — `b-research`** *(run if plan flagged a tool/approach decision)*
-Research open questions: which library to choose, best practices, known pitfalls.
-Only run if genuinely needed — don't research things already known.
+**3b — `b-research`** *(if plan flagged an open tool/approach decision)*
+Research open questions. Append a `## Research` section to the plan file.
 
-Both 3a and 3b can run in the same phase. 3a is far more common.
+Both can run in the same phase. 3a is far more common.
 
 ---
 
+### End of Session 1
+
+After Phases 1–3, the plan file contains everything needed for clean execution.
+Print:
+
+```
+✅ Plan ready: .claude/b-plans/[task-slug].md
+
+Open a new session and run:
+  execute plan from .claude/b-plans/[task-slug].md
+```
+
+Do not implement anything in Session 1.
+
+---
+
+## Session 2 — Execution
+
+Triggered by: `execute plan from .claude/b-plans/[file].md`
+
 ### Phase 4 — IMPLEMENT
 
-Now write the code, informed by:
-- The ordered steps from Phase 1 (b-plan)
-- The existing structure from Phase 2 (b-analyze)
-- The accurate API surface from Phase 3 (b-docs / b-research)
-
-Execute plan steps one at a time. After each step:
-- Confirm the step is complete and matches the "done when" criteria from the plan
-- If something unexpected surfaces → pause, re-evaluate remaining steps, continue
+Read the plan file. Execute steps in order:
+- Check off each step `- [ ]` → `- [x]` in the file as it completes
+- Use the `## Context` section (b-analyze findings) to match existing patterns
+- Use the `## Docs` section for accurate library API calls
+- If something unexpected surfaces → pause, update the plan file, continue
 
 Do not implement all steps in one pass without checkpoints.
 
@@ -112,41 +133,58 @@ Do not implement all steps in one pass without checkpoints.
 ### Phase 5 — REVIEW `(b-analyze)`
 
 Always run. After implementation is complete, invoke `b-analyze` on the newly
-written code as a self-review:
+written code:
 
 - Does the new code follow the patterns found in Phase 2?
 - Any complexity hotspots introduced?
 - Any duplication with existing code?
-- Anything that should be flagged before shipping?
 
 If findings are 🔴 High → fix before presenting to user.
 If findings are 🟡 Medium or 🟢 Low → present alongside the implementation as known follow-ups.
+
+Mark the plan file as complete:
+
+```markdown
+**Status**: ✅ Done — [date]
+```
 
 ---
 
 ## Output format
 
-Present a progress header at each phase transition so the user can follow along:
-
+**Session 1:**
 ```
-── b-feature: [task name] ──────────────────
+── b-feature: [task name] — planning ───────
 
 ▶ Phase 1 — Plan
-[b-plan output]
+  → written to .claude/b-plans/[slug].md
 
-▶ Phase 2 — Understand existing code      [SKIP if greenfield]
-[b-analyze findings — brief summary]
+▶ Phase 2 — Understand existing code       [SKIP if greenfield]
+  → findings appended to plan file
 
 ▶ Phase 3 — Gather
-  3a. Docs: [library names fetched]        [SKIP if no libraries]
+  3a. Docs: [libraries]                    [SKIP if none]
   3b. Research: [topic]                    [SKIP if not needed]
+  → notes appended to plan file
 
+✅ Plan ready: .claude/b-plans/[slug].md
+Open a new session and run:
+  execute plan from .claude/b-plans/[slug].md
+```
+
+**Session 2:**
+```
+── b-feature: [task name] — executing ──────
+
+▶ Reading plan: .claude/b-plans/[slug].md
 ▶ Phase 4 — Implement
-[code, step by step]
+  [x] Step 1 — done
+  [x] Step 2 — done
+  [ ] Step 3 — in progress...
 
 ▶ Phase 5 — Self-review
-[b-analyze findings on new code]
-[🔴 fixed before presenting / 🟡🟢 noted as follow-ups]
+  [b-analyze findings]
+  [🔴 fixed / 🟡🟢 noted as follow-ups]
 
 ── Done ─────────────────────────────────
 ```
@@ -157,8 +195,10 @@ Present a progress header at each phase transition so the user can follow along:
 
 - **Never skip Phase 1** — a plan, even a short one, prevents wrong-direction work
 - **Never skip Phase 5** — shipping unreviewed code defeats the purpose of the pipeline
-- Phase order is fixed: Plan → Understand → Gather → Implement → Review. Never reorder.
-- If a MCP tool fails mid-pipeline, note it, skip that phase, continue — do not abort
-- Keep phase summaries concise — the user wants progress, not a wall of text between phases
-- If the task grows significantly during implementation, pause and revise the plan before continuing
-- b-feature is for complex tasks. If the task turns out to be simple (one file, one function), say so and offer to proceed without the full pipeline.
+- **Never implement in Session 1** — planning and execution must be in separate sessions
+- Phase order is fixed within each session. Never reorder.
+- All b-analyze findings from Phase 2 must be written to the plan file, not just kept in context
+- If a MCP tool fails mid-pipeline, note it in the plan file, skip that phase, continue
+- If the task grows significantly during execution, pause and update the plan file before continuing
+- b-feature is for complex tasks. If the task turns out to be simple (one file, ≤4 steps),
+  run the full pipeline in a single session without writing a plan file.
