@@ -43,14 +43,22 @@ If context7 is unavailable on a library/framework topic, skip Step 1 silently an
 
 ### Step 0 — Classify the topic
 
-Before searching, determine: **is this topic a library, framework, SDK, or specific tool?**
+Before searching, determine: **is this topic a library/framework AND does the user need API-level detail** (usage, parameters, method signatures, configuration options)?
 
-Examples that qualify: `SendGrid SDK`, `BullMQ`, `Prisma`, `React Query`, `AWS SES SDK`, `Express.js`, `Zod`
+Both conditions must be true to proceed to Step 1:
+1. Topic is a library, framework, SDK, or specific tool
+2. User needs API behavior — *not* trends, comparisons, adoption, community feedback, or recent news
 
-Examples that do NOT qualify: `best practices for error handling`, `compare SaaS pricing models`, `history of REST APIs`
+Examples that qualify (both conditions met): asking *how to use* `SendGrid SDK`, `BullMQ` job options, `Prisma` query API, `Zod` schema methods
 
-**If YES → run Step 1 before Step 2.**
-**If NO → skip to Step 2.**
+Examples that do NOT qualify (skip to Step 2):
+- `compare Prisma vs Drizzle adoption in 2025` — comparative/trend intent, Context7 has no value
+- `best practices for error handling` — conceptual, not API
+- `is BullMQ still maintained?` — ecosystem/community question
+- `what changed in React Query v5?` — recency-dependent, Context7 may be stale
+
+**If both conditions are YES → run Step 1 before Step 2.**
+**Otherwise → skip to Step 2.**
 
 ---
 
