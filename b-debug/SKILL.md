@@ -24,8 +24,17 @@ ranked hypotheses, locate root cause, then fix. Never jump straight to patching.
 
 ## Tools required
 
-- `munch_code` (or equivalent) — from `jcodemunch` MCP server
-- `sequential_thinking` — from `sequential-thinking` MCP server
+From `jcodemunch` MCP server:
+- `get_context_bundle` — get full context from an entry point (file or function)
+- `find_references` — trace all callers and callees of a function
+- `get_blast_radius` — understand what depends on a suspected module
+- `get_symbol` — inspect a specific function or class in detail
+
+From `sequential-thinking` MCP server:
+- `sequentialthinking` — structured reasoning to form and rank hypotheses
+
+From `brave-search` MCP server *(optional)*:
+- `brave_web_search` — look up known library errors, GitHub issues, changelogs
 
 If jcodemunch is unavailable: read relevant files manually, proceed with Steps 2–4.
 If sequential-thinking is unavailable: reason through hypotheses inline, document steps explicitly in response.
@@ -51,12 +60,17 @@ or "recent changes" is often the fastest path to root cause.
 
 ### Step 2 — Map the code structure
 
-Use `jcodemunch` to analyze the relevant code area:
+Use `jcodemunch` to trace the execution path in this order:
 
-- Map the call graph from entry point to where the failure occurs
-- Identify all layers the request/data passes through (middleware, validators, handlers, services, DB)
-- Note any async boundaries, error handlers, or silent failure points (try/catch that swallows errors, `.catch(() => {})`)
-- Look for hidden choke points: auth middleware, rate limiters, interceptors, event listeners
+1. `get_context_bundle` on the entry point (route handler, CLI command, event listener) — get full context of the starting point
+2. `find_references` on the relevant function — trace all callers and callees across files
+3. `get_blast_radius` on the suspected module — understand what depends on it
+4. `get_symbol` on any function that looks suspicious — inspect its full implementation
+
+From this, identify:
+- All layers the request/data passes through (middleware, validators, handlers, services, DB)
+- Any async boundaries, error handlers, or silent failure points (try/catch that swallows errors, `.catch(() => {})`)
+- Hidden choke points: auth middleware, rate limiters, interceptors, event listeners
 
 **Goal**: understand the full execution path, not just the file where the error surfaces.
 The bug is often one layer above or below where it appears.
@@ -80,6 +94,11 @@ Use `sequential-thinking` to reason through possible causes:
 
 Present the ranked hypotheses to the user briefly before investigating.
 
+**Library error shortcut**: If the error message or stack trace references a specific library or framework:
+- Use `brave_web_search` with the exact error message in quotes to find known issues, GitHub issues, or changelog entries
+- If results point to an API misuse, invoke `b-docs` to verify the correct behavior for that library version
+- Do this before verifying hypotheses — it may eliminate wrong hypotheses immediately and save significant time
+
 ---
 
 ### Step 4 — Verify root cause
@@ -88,7 +107,7 @@ Test hypotheses starting from the most likely:
 
 - Add targeted logging at the suspected choke point (not scattered everywhere)
 - Check config/env values if hypothesis points there
-- Use `jcodemunch` to re-examine a specific function if the call graph revealed something suspicious
+- Use `get_symbol` or `get_context_bundle` (jcodemunch) to re-examine a specific function if the call graph revealed something suspicious
 - If the codebase uses a library: invoke `b-docs` to verify the correct API behavior for that library version
 
 **Stop when root cause is confirmed** — don't continue investigating other hypotheses once found.

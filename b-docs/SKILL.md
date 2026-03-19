@@ -81,12 +81,15 @@ From the fetched docs, extract only what's needed for the user's task:
 
 ---
 
-### Step 5 — Implement with confidence
+### Step 5 — Hand off
 
-Now write the code, knowing the API is accurate for the current version.
+Present the extracted API surface. Then route based on context:
 
-- Reference the fetched doc in a brief comment if the API is non-obvious: `// per Context7: sendgrid v8 uses dynamic templates, not legacy templates`
-- If the docs reveal a caveat or version difference from what you expected, call it out explicitly before the code
+- **Lookup only** ("how does X work?") → stop here, output lookup format below
+- **User requested implementation** → write the code using the fetched docs; add a one-line comment on non-obvious API calls: `// per Context7: sendgrid v8 uses dynamic templates`
+- **Called from b-feature pipeline (Phase 3a)** → return the fetched doc context to Phase 4 (Implement). Do NOT implement here — the orchestrator handles execution in Session 2.
+
+If the docs reveal a caveat or version difference, call it out explicitly before any code.
 
 ---
 

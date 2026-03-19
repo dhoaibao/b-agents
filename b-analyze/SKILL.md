@@ -29,7 +29,12 @@ b-debug is for code that is broken. If there's an error message → use b-debug 
 
 ## Tools required
 
-- `munch_code` (or equivalent) — from `jcodemunch` MCP server
+From `jcodemunch` MCP server:
+- `index_repo` / `index_folder` — index the codebase before querying
+- `get_repo_outline` — overview of all modules, files, and top-level symbols
+- `get_file_outline` — functions, classes, and exports per file
+- `get_dependency_graph` — module coupling and circular dependency detection
+- `search_symbols` — find duplicate or similarly-named functions across files
 
 If jcodemunch is unavailable: read files manually, reason about structure inline.
 Note the limitation — manual reading may miss cross-file dependencies.
@@ -53,8 +58,15 @@ concern matters most — analyzing everything produces noise.
 
 ### Step 2 — Structural analysis
 
-Use `jcodemunch` to map the target code:
+Use `jcodemunch` to map the target code in this order:
 
+1. `index_repo` (or `index_folder` for a subdirectory) — index the codebase first
+2. `get_repo_outline` — overview of all modules, files, and top-level symbols
+3. `get_file_outline` — inspect each relevant file for functions, classes, and exports
+4. `get_dependency_graph` — map module coupling; look for circular deps and tight coupling
+5. `search_symbols` — find duplicate or similarly-named functions across files
+
+From these, extract:
 - **Call graph**: what calls what, entry points, leaf functions
 - **Dependency map**: which modules depend on which, circular dependencies
 - **File/module boundaries**: what's responsible for what

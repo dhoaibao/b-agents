@@ -31,9 +31,10 @@ The rule is simple: one search call, one clean answer.
 - Topic is a library/framework and the user wants API details → use **b-docs**
 - The answer clearly requires reading full articles, not just search snippets
 
-## Tool required
+## Tools required
 
-- `brave_web_search` — from `brave-search` MCP server
+- `brave_web_search` — from `brave-search` MCP server (required)
+- `brave_summarizer` — from `brave-search` MCP server *(optional, for factual queries)*
 
 If unavailable: stop and tell the user:
 "❌ brave-search MCP is not connected. Please check `/mcp`."
@@ -54,10 +55,14 @@ If the first query returns no useful results, retry once with a rephrased query.
 If the retry also fails → tell the user the search returned no relevant results
 and suggest they try b-research for a deeper lookup.
 
+**For factual queries** (version numbers, prices, dates, definitions, yes/no questions):
+Also call `brave_summarizer` with the same query in parallel with `brave_web_search`.
+Use the summarizer output as the primary answer; use search result URLs as citations.
+
 ### Step 2 — Synthesize
 
 Do NOT dump raw results. Write a clean, direct response:
-- Lead with the direct answer
+- Lead with the direct answer (from summarizer if available, otherwise from search snippets)
 - Include version numbers and dates when relevant
 - Group related findings if results cover multiple aspects
 - Cite sources at the end

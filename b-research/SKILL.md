@@ -27,6 +27,7 @@ then synthesize into a comprehensive report with citations.
 
 - `brave_web_search` — from `brave-search` MCP server
 - `firecrawl_scrape` — from `firecrawl` MCP server
+- `firecrawl_search` — from `firecrawl` MCP server *(optional, fallback search with full content)*
 - `resolve-library-id` + `get-library-docs` — from `context7` MCP server *(optional, for library/framework topics)*
 
 If brave-search or firecrawl is unavailable, stop and tell the user:
@@ -70,15 +71,18 @@ Use `resolve-library-id` to find the correct Context7 library ID, then `get-libr
 - Pick the **3–5 most relevant URLs** — prioritize official docs, authoritative blogs, recent articles
 - If Context7 already covered official docs well in Step 1, deprioritize official doc URLs here and favor community/comparison sources instead
 
+**Fallback**: If `brave_web_search` returns fewer than 3 relevant results, retry with `firecrawl_search` using the same query. `firecrawl_search` returns full page content directly — skip Step 3 for these results.
+
 ---
 
 ### Step 3 — Scrape
 
-- Call `firecrawl_scrape` on each selected URL
+- Call `firecrawl_scrape` on all selected URLs **in parallel** (single message, multiple tool calls)
 - Use `formats: ["markdown"]` to get clean content
 - **Fallback for JS-heavy pages** (SPAs, dashboards, React-rendered docs): if firecrawl returns empty content or <200 words, retry once with `waitFor: 3000`. If still empty, skip and note in report as "could not scrape — JS-rendered page".
 - If a page returns a rate-limit or 403, skip it and note in report
 - Max 5 URLs scraped per session to avoid excessive tool calls
+- If rate-limiting occurs on parallel calls, retry failed URLs sequentially
 
 ---
 

@@ -9,7 +9,9 @@ For quick overview and installation, see [README.md](README.md).
 
 Decomposes any non-trivial task into ordered steps, dependencies, and risks before
 any implementation begins. Uses `sequential-thinking` to reason through the happy path,
-identify blockers, and surface unknowns that need resolution first.
+identify blockers, and surface unknowns. For tasks that modify existing code, scans
+the codebase first with `jcodemunch` (`get_repo_outline`, `get_file_outline`) so the
+plan references real file paths and respects existing patterns.
 
 **Good triggers:**
 ```
@@ -44,7 +46,8 @@ does zod support async validation?
 ```
 
 **Output:** Accurate method signatures, required parameters, auth setup, error codes,
-and deprecation notices for the current version. Followed by implementation if requested.
+and deprecation notices for the current version. Routes to implementation, lookup-only,
+or returns context to b-feature pipeline depending on how it was called.
 
 **Fallback:** If context7 has no index for the library → escalates to `b-research`
 to scrape official docs directly.
@@ -68,8 +71,9 @@ deep dive into Redis Streams
 **Output:** Summary, key findings, optional comparison table, and cited sources.
 Context7 is used automatically when the topic is a library or framework.
 
-**Limits:** Max 5 URLs scraped per session. JS-heavy pages get one retry with
-`waitFor: 3000` before being skipped.
+**Limits:** Max 5 URLs scraped per session, fetched in parallel. JS-heavy pages get
+one retry with `waitFor: 3000` before being skipped. If Brave returns fewer than 3
+relevant results, falls back to `firecrawl_search` which returns full content directly.
 
 ---
 
@@ -77,6 +81,8 @@ Context7 is used automatically when the topic is a library or framework.
 
 Deep code analysis using jcodemunch — maps structure, measures complexity, identifies
 duplicate logic, and produces severity-ranked findings with concrete suggestions.
+Uses `index_repo` → `get_repo_outline` → `get_file_outline` → `get_dependency_graph`
+→ `search_symbols` in sequence to build a complete structural picture.
 Does not fix anything; produces findings only.
 
 **Good triggers:**
@@ -97,8 +103,11 @@ Use b-debug when something is broken.
 
 ### b-debug
 
-Systematic, hypothesis-driven bug tracing. Maps the full execution path with jcodemunch,
+Systematic, hypothesis-driven bug tracing. Maps the full execution path with jcodemunch
+(`get_context_bundle` → `find_references` → `get_blast_radius` → `get_symbol`),
 forms ranked hypotheses with sequential-thinking, confirms root cause, then fixes.
+For library-related errors, searches for known issues via `brave_web_search` and
+invokes `b-docs` to verify correct API behavior before verifying hypotheses.
 Never patches before root cause is confirmed.
 
 **Good triggers:**
@@ -112,8 +121,8 @@ fix: email queue jobs disappearing silently
 **Output:** Symptoms summary, execution path map, ranked hypotheses, confirmed root cause,
 minimal fix, and verification instructions.
 
-**Rule:** No patch is written until root cause is explicitly confirmed. If the bug
-involves a library's behavior, `b-docs` is invoked to verify the correct API.
+**Rule:** No patch is written until root cause is explicitly confirmed. Library errors
+trigger a web lookup and `b-docs` call before hypothesis verification.
 
 ---
 
@@ -217,12 +226,17 @@ When in doubt, call the skill by name.
 ## Skill interaction map
 
 ```
-b-plan ──── flags unknowns ──────────────► b-docs     (library API needed)
+b-plan ──── modify existing code ────────► jcodemunch (scan structure first)
+       ──── flags unknowns ──────────────► b-docs     (library API needed)
                                          ► b-research  (decision needed)
 
-b-debug ─── root cause is library-related ► b-docs    (verify API behavior)
+b-debug ─── trace execution path ────────► jcodemunch (get_context_bundle → find_references → get_blast_radius → get_symbol)
+        ─── library error detected ──────► brave-search (lookup known issues)
+                                         ► b-docs      (verify API behavior)
 
 b-analyze ── findings need refactor ──────► b-plan    (sequence it safely)
+
+b-quick-search ── factual query ──────────► brave_summarizer (parallel, AI-synthesized answer)
 
 b-feature ── orchestrates all ────────────► b-plan
                                           ► b-analyze  (understand existing)
@@ -241,7 +255,9 @@ b-feature ── orchestrates all ────────────► b-plan
 ### b-quick-search
 
 Single-call web lookup via Brave Search. Returns a fast, cited answer from the live
-web — no scraping, no deep synthesis. The rule: one search call, one clean answer.
+web — no scraping, no deep synthesis. For factual queries (versions, prices, dates,
+definitions), also calls `brave_summarizer` in parallel to get an AI-synthesized
+answer alongside raw search results.
 
 **Good triggers:**
 ```
@@ -251,8 +267,8 @@ latest release of Fedora?
 recent CVE for OpenSSL?
 ```
 
-**Output:** Direct answer with source citations. Single-fact queries get an inline
-citation; multi-point queries get a short "Key findings" list.
+**Output:** Direct answer with source citations. Factual queries use `brave_summarizer`
+output as the primary answer; multi-point queries get a short "Key findings" list.
 
 **Distinction from b-research:** If one search can answer it → b-quick-search.
 If you need to read multiple full pages → b-research.
@@ -265,7 +281,9 @@ If you need to read multiple full pages → b-research.
 
 Aggregates today's top tech news from 8 curated sources (Ars Technica, 9to5Google,
 9to5Mac, 9to5Linux, BleepingComputer, The Register, How-To Geek, Hacker News),
-groups by topic, and outputs a bilingual digest (English + Vietnamese).
+groups by topic, and outputs a bilingual digest (English + Vietnamese). Uses
+`brave_news_search` (not `brave_web_search`) with `freshness: "pd"` for proper
+news filtering. All 5 topic searches run in parallel for speed.
 
 **Good triggers:**
 ```

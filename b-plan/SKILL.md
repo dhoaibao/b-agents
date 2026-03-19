@@ -26,10 +26,12 @@ implementation begins.
 
 ## Tools required
 
-- `sequential_thinking` — from `sequential-thinking` MCP server
+- `sequentialthinking` — from `sequential-thinking` MCP server
+- `get_repo_outline`, `get_file_outline` — from `jcodemunch` MCP server *(optional, for modify-existing-code tasks)*
 
 If sequential-thinking is unavailable: reason through the plan inline step by step,
 making the thinking explicit in the response. Do not skip planning — just do it without the tool.
+If jcodemunch is unavailable on a modify-existing task: read key files manually before Step 2.
 
 ---
 
@@ -45,6 +47,20 @@ Before planning, confirm:
 
 If the task description is ambiguous, ask one focused question to clarify — not multiple.
 Once scope is clear, proceed.
+
+---
+
+### Step 1.5 — Scan existing code *(conditional)*
+
+Run if: task modifies or extends existing code.
+Skip if: pure greenfield with no existing modules.
+
+Use jcodemunch to scan the relevant area before decomposing:
+- `get_repo_outline` — understand overall structure, file layout, module boundaries
+- `get_file_outline` — inspect the specific files the plan will touch
+
+**Goal**: ensure the plan references real file paths, real function names, and respects existing patterns.
+A plan built on wrong assumptions about the codebase fails at Step 1 of execution.
 
 ---
 

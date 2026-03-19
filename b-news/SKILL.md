@@ -14,7 +14,7 @@ then groups stories by topic into a clean bilingual daily digest.
 
 ## Tools required
 
-- `brave_web_search` — from `brave-search` MCP server (required)
+- `brave_news_search` — from `brave-search` MCP server (required)
 - `firecrawl_scrape` — from `firecrawl` MCP server (optional, for detail on demand)
 
 If `brave-search` is unavailable, stop and tell the user:
@@ -41,20 +41,19 @@ Results from these domains are preferred over generic tech blogs:
 
 ### Step 1 — Search by topic category
 
-Run **5 sequential searches**, one per major topic area.
-Use topic-based queries — do NOT use `site:` or boolean `OR` operators,
-as these are unreliable in Brave Search MCP.
+Run **5 searches in parallel** (single message, multiple tool calls), one per major topic area.
+Use `brave_news_search` — it is designed for news with built-in freshness filtering.
+Do NOT use `site:` or boolean `OR` operators, as these are unreliable in Brave Search MCP.
 
 ```
-Search 1: "AI machine learning news [current month year]"
-Search 2: "security vulnerability breach [current month year]"
-Search 3: "Apple Google Microsoft product news [current month year]"
-Search 4: "Linux open source release [current month year]"
-Search 5: "Hacker News top stories today"
+Search 1: "AI machine learning"
+Search 2: "security vulnerability breach"
+Search 3: "Apple Google Microsoft product"
+Search 4: "Linux open source release"
+Search 5: "developer tools programming"
 ```
 
-- Set `count: 5` per search
-- Replace `[current month year]` with the actual current month and year (e.g. "March 2026")
+- Use `brave_news_search` with `count: 5` and `freshness: "pd"` (past day) per search
 - After getting results, prefer stories from the curated source list above
   over generic tech blogs — but do not discard good stories from other sources
 - Collect: headline, URL, 1-sentence snippet per story
@@ -115,8 +114,7 @@ The Register, 9to5Linux, How-To Geek, Hacker News*
 ## Rules
 
 - Always include today's actual date in the header
-- Always use the actual current month and year in search queries — "today" alone is unreliable
-- Run all 5 searches sequentially — no parallel calls
+- Always run all 5 `brave_news_search` calls in parallel — never sequentially
 - Never use `site:` operator or boolean `OR` in queries — use topic keywords instead
 - Max 3 stories per category — cut the weakest stories if more are found
 - Omit any category with no stories rather than padding with weak content
