@@ -1,10 +1,10 @@
 ---
 name: b-news
 description: >
-  Aggregate and summarize today's top tech news from curated sources.
-  ALWAYS use this skill when the user says "tin tức hôm nay", "news hôm nay",
-  "có gì mới hôm nay", "tech news", "b-news", "điểm tin", or asks what's
-  happening in tech today. Trigger even if the user just says "hôm nay có gì mới không".
+  Aggregate and summarize today's top tech news from curated sources into a grouped digest.
+  ALWAYS use when the user says "tin tức hôm nay", "news hôm nay", "có gì mới hôm nay",
+  "tech news", "b-news", "điểm tin", or asks what's happening in tech today.
+  Trigger even for short queries like "hôm nay có gì mới không".
 ---
 
 # b-news
@@ -90,8 +90,12 @@ call `firecrawl_scrape` on that one URL. Do not bulk scrape during the initial d
 
 ## Output format
 
-Each story: English headline + 1-sentence English summary + source link,
-followed by Vietnamese translation on the next line.
+**Language detection**: Check the user's query language before formatting output.
+- Vietnamese query ("tin tức", "điểm tin", "hôm nay có gì mới") → bilingual output (English headline + Vietnamese translation)
+- English query ("tech news", "news today", "what's new") → English-only output (skip Vietnamese translations)
+- Ambiguous or mixed → default to bilingual
+
+### Bilingual output (Vietnamese query)
 
 ```
 # 📰 Tech News — [Today's Date]
@@ -102,11 +106,22 @@ followed by Vietnamese translation on the next line.
 [1-sentence English summary] — ([Source Name](URL))
 > [Tiêu đề tiếng Việt] — [1 câu tóm tắt tiếng Việt]
 
-## 🔒 Security & Privacy
+[... remaining categories ...]
+
+---
+*[N] stories · Sources searched: Ars Technica, 9to5Google, 9to5Mac, BleepingComputer,
+The Register, 9to5Linux, How-To Geek, Hacker News*
+```
+
+### English-only output (English query)
+
+```
+# 📰 Tech News — [Today's Date]
+
+## 🤖 AI & Machine Learning
 
 **[English Headline]**
 [1-sentence English summary] — ([Source Name](URL))
-> [Tiêu đề tiếng Việt] — [1 câu tóm tắt tiếng Việt]
 
 [... remaining categories ...]
 

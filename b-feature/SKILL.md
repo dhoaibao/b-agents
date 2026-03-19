@@ -1,14 +1,11 @@
 ---
 name: b-feature
 description: >
-  Full-cycle feature development orchestrator. Runs the complete workflow:
-  plan → fetch docs → research (if needed) → implement → self-review.
-  ALWAYS use this skill when the user prefixes their request with "b-feature:",
-  or describes building something non-trivial from scratch, integrating a new
-  service, implementing a significant new capability, or making changes that
-  span multiple files and layers. Use when you want the full pipeline run
-  automatically without manually invoking each skill. Best triggered explicitly:
-  "b-feature: [description]" to guarantee activation.
+  Full-cycle feature orchestrator: plan → docs → research → implement → self-review.
+  ALWAYS use when the user prefixes with "b-feature:", or describes building something
+  non-trivial from scratch, integrating a new service, or making changes spanning
+  multiple files and layers. Best triggered explicitly: "b-feature: [description]".
+  Not for bug fixes (use b-debug) or quick single-file edits.
 ---
 
 # b-feature

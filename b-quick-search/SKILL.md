@@ -1,16 +1,11 @@
 ---
 name: b-quick-search
 description: >
-  Use Brave Search MCP to get a fast, cited answer from the live web in a single
-  search call — no scraping, no deep synthesis.
-  ALWAYS use this skill when the user asks to "search", "tìm kiếm", "look up",
-  "tìm nhanh", "find latest", "tìm mới nhất", "what is the latest version of X",
-  "recent news about X", or any query that needs a quick current-info lookup:
-  latest releases, current prices, recent changelogs, CVEs, or anything where
-  freshness matters and a fast answer is enough.
+  Fast, single-call web lookup via Brave Search — no scraping, no deep synthesis.
+  ALWAYS use when the user says "search", "tìm kiếm", "look up", "tìm nhanh",
+  "find latest", "tìm mới nhất", "what is the latest version of X", or needs a quick
+  current-info lookup: latest releases, prices, changelogs, CVEs.
   Use b-research instead when the user wants depth, comparison, or a full report.
-  When in doubt between the two: if one search call can answer it → use this skill.
-  If the answer requires reading multiple full pages → use b-research.
 ---
 
 # b-quick-search

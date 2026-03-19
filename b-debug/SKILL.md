@@ -1,12 +1,10 @@
 ---
 name: b-debug
 description: >
-  Systematically trace and fix bugs using structured hypothesis-driven debugging.
-  ALWAYS use this skill when the user says "debug", "tại sao lỗi này", "bug",
-  "không chạy", "lỗi", "fix this", "why is X not working", "unexpected behavior",
-  "không hoạt động", or when an error message is pasted into the conversation.
-  Use this especially when the bug is non-obvious, spans multiple layers, or has
-  no clear error message. Never guess-and-patch — always trace systematically.
+  Systematic hypothesis-driven debugging: trace execution paths, form ranked hypotheses, confirm root cause, then fix.
+  ALWAYS use when the user says "debug", "tại sao lỗi này", "bug", "không chạy", "lỗi",
+  "fix this", "why is X not working", "unexpected behavior", "không hoạt động",
+  or when an error message is pasted. Never guess-and-patch — always trace systematically.
 ---
 
 # b-debug

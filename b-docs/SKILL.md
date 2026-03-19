@@ -1,13 +1,10 @@
 ---
 name: b-docs
 description: >
-  Fetch live, version-accurate documentation from Context7 before implementing anything
-  that involves a library, SDK, framework, or third-party tool.
-  ALWAYS use this skill when the user mentions a specific library or package by name
-  (e.g. SendGrid, BullMQ, Prisma, Zod, Express, AWS SES, Mailgun, Stripe, Axios),
-  asks "how to use X", "X API", "X method", "does X support Y", or before writing
-  any integration code. Use this even when you think you already know the API —
-  training data may be outdated. Never implement library code from memory alone.
+  Fetch live, version-accurate library documentation from Context7 before writing integration code.
+  ALWAYS use when the user mentions a library by name (SendGrid, BullMQ, Prisma, Zod, Stripe, etc.),
+  asks "how to use X", "X API", "does X support Y", or before any SDK integration.
+  Never implement library code from memory alone — training data may be outdated.
 ---
 
 # b-docs
@@ -27,12 +24,13 @@ SDK code. Prevents hallucinated APIs, wrong method signatures, and version misma
 
 - `resolve-library-id` — from `context7` MCP server
 - `get-library-docs` — from `context7` MCP server
+- `firecrawl_scrape` — from `firecrawl` MCP server *(optional, fallback when context7 has no index)*
 
 If context7 is unavailable:
 - Tell the user: "❌ context7 MCP is not connected. Please check `/mcp`."
 - Do NOT fall back to training data for API details — offer to use `b-research` to scrape official docs instead.
 
-Graceful degradation: ⚠️ Partial — if context7 is unavailable, fall back to b-research to scrape official docs instead of stopping entirely.
+Graceful degradation: ⚠️ Partial — fallback chain: context7 → firecrawl (direct scrape of official docs) → b-research (full research pipeline).
 
 ---
 
@@ -58,7 +56,10 @@ If multiple libraries are involved (e.g. "integrate Mailgun with Express"), run 
 Call `resolve-library-id` with the library name.
 
 - If multiple results return, pick the one with the highest match and correct scope (e.g. prefer `@sendgrid/mail` over a community fork)
-- If no result found: tell the user "⚠️ context7 has no index for `[library]`. Falling back to b-research to scrape official docs." then invoke b-research workflow
+- If no result found: try the firecrawl direct-scrape fallback (see below) before escalating to b-research
+
+**Firecrawl direct-scrape fallback** *(when context7 has no index for a library)*:
+If the library has a well-known official docs URL (e.g. docs.sendgrid.com, docs.bullmq.io, docs.stripe.com) → call `firecrawl_scrape` on that URL with `formats: ["markdown"], onlyMainContent: true`. If the scrape returns ≥300 words of relevant content → use it directly as the doc source, skip b-research. If the scrape fails or returns <300 words → then escalate to b-research: tell the user "⚠️ context7 has no index for `[library]` and direct scrape was insufficient. Falling back to b-research to scrape official docs."
 
 ---
 

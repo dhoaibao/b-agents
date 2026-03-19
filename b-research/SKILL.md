@@ -1,13 +1,11 @@
 ---
 name: b-research
 description: >
-  Deep research by combining Brave Search + Firecrawl scraping to get full page content,
-  with optional Context7 lookup for library/framework topics.
-  ALWAYS use this skill when the user asks to "research", "tìm hiểu sâu", "deep dive",
-  "so sánh", "compare", "tổng hợp thông tin về", "tìm hiểu", "viết report về", or any
-  query that needs more than search snippets — such as evaluating tools, understanding
-  concepts deeply, comparing options, or producing a comprehensive report.
-  Prefer this over b-search when the user wants depth, not just a quick answer.
+  Deep research: search + scrape full pages + synthesize a comprehensive report with citations.
+  ALWAYS use when the user says "research", "tìm hiểu sâu", "deep dive", "so sánh",
+  "compare", "tổng hợp thông tin về", "viết report về", or needs depth — evaluating tools,
+  comparing options, or producing a multi-source report.
+  Use b-quick-search instead when a single search call can answer the question.
 ---
 
 # b-research

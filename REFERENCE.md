@@ -49,8 +49,7 @@ does zod support async validation?
 and deprecation notices for the current version. Routes to implementation, lookup-only,
 or returns context to b-feature pipeline depending on how it was called.
 
-**Fallback:** If context7 has no index for the library → escalates to `b-research`
-to scrape official docs directly.
+**Fallback chain:** context7 → firecrawl direct scrape (if library has a known official docs URL) → b-research (full research pipeline). The firecrawl fallback tries a single `firecrawl_scrape` on the official docs URL before escalating to the heavier b-research pipeline.
 
 ---
 
@@ -232,6 +231,9 @@ When in doubt, call the skill by name.
 b-plan ──── modify existing code ────────► jcodemunch (scan structure first)
        ──── flags unknowns ──────────────► b-docs     (library API needed, resolved inline)
                                          ► b-research  (decision needed)
+
+b-docs ──── context7 has no index ──────► firecrawl   (direct scrape of official docs URL, single page)
+       ──── firecrawl insufficient ────► b-research  (full multi-source research)
 
 b-debug ─── trace execution path ────────► jcodemunch (get_context_bundle → find_references → get_blast_radius → get_symbol)
         ─── library error detected ──────► brave-search (lookup known issues)

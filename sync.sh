@@ -12,6 +12,13 @@ SKILLS_DIR="$HOME/.claude/skills"
 
 # ── 1. Clone or update the repo ──────────────────────────────────────────────
 if [ -d "$LOCAL_REPO/.git" ]; then
+  # Check for uncommitted changes before pulling
+  if [ -n "$(git -C "$LOCAL_REPO" status --porcelain)" ]; then
+    echo "⚠️  Local changes detected in $LOCAL_REPO"
+    echo "   Please commit or stash your changes before syncing."
+    echo "   Run: cd $LOCAL_REPO && git stash"
+    exit 1
+  fi
   echo "🔄 Updating b-agent-skills..."
   git -C "$LOCAL_REPO" pull --ff-only
 else

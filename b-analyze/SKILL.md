@@ -1,14 +1,11 @@
 ---
 name: b-analyze
 description: >
-  Deep code analysis using jcodemunch — map structure, measure complexity, find
-  duplicate logic, and produce actionable improvement suggestions.
-  ALWAYS use this skill when the user says "analyze", "review this code", "phân tích",
-  "code review", "refactor", "dọn dẹp code", "tìm code smell", "cải thiện code",
-  "tái cấu trúc", "làm sao cải thiện", or when asked to understand an unfamiliar
-  codebase before making changes. Also use before any significant refactor to establish
-  a baseline. Distinct from b-debug — use b-analyze when there is no bug to fix,
-  only code to understand or improve.
+  Deep code analysis — map structure, measure complexity, find duplicates, produce actionable suggestions.
+  ALWAYS use when the user says "analyze", "review this code", "phân tích", "code review",
+  "refactor", "dọn dẹp code", "tìm code smell", "cải thiện code", "tái cấu trúc",
+  or when asked to understand an unfamiliar codebase before changes.
+  Distinct from b-debug: use b-analyze when code works but could be better, not when something is broken.
 ---
 
 # b-analyze

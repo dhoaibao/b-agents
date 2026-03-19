@@ -81,6 +81,10 @@ Use the Bash tool to run the appropriate command based on Step 1:
 
 Output the script's stdout — it contains live progress messages (🔄 Updating, 🔗 Syncing, ✅ per skill).
 
+If sync.sh exits with error: check the output message.
+- If "⚠️ Local changes detected" → tell the user to run `cd ~/.b-agent-skills && git stash` first, then retry sync.
+- If `git pull` fails with "not possible to fast-forward" → tell the user their local clone has diverged and suggest `git -C ~/.b-agent-skills reset --hard origin/main` (ask for confirmation first, as this discards local changes).
+
 ### Step 4 — Verify symlinks
 
 Run both checks:

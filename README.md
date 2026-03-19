@@ -28,7 +28,7 @@ All 5 MCPs must be connected. Verify with `/mcp` in Claude Code.
 | Skill | MCP(s) | Use when |
 |---|---|---|
 | [`b-plan`](#b-plan) | sequential-thinking, jcodemunch* | Before writing code for any non-trivial task |
-| [`b-docs`](#b-docs) | context7 | Before using any library or SDK |
+| [`b-docs`](#b-docs) | context7, firecrawl* | Before using any library or SDK |
 | [`b-research`](#b-research) | brave-search, firecrawl, context7*, sequential-thinking* | Deep research, tool comparison, synthesis |
 | [`b-analyze`](#b-analyze) | jcodemunch, sequential-thinking*, brave-search* | Understand or review code before changing it |
 | [`b-debug`](#b-debug) | jcodemunch, sequential-thinking, brave-search*, firecrawl* | Trace bugs that have no obvious cause |

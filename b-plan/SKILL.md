@@ -1,13 +1,11 @@
 ---
 name: b-plan
 description: >
-  Decompose any non-trivial task into ordered steps, dependencies, and risks before
-  writing any code. ALWAYS use this skill when the user says "plan", "lên kế hoạch",
-  "thiết kế", "design", "how should I approach", "nên làm thế nào", "before I implement",
-  "trước khi code", or describes a task that touches more than 2 files or involves
-  multiple moving parts. Also use when the user is about to implement something complex
-  and hasn't explicitly asked for a plan — a plan first saves more time than it costs.
-  Never jump straight to implementation on complex tasks without running this skill first.
+  Decompose non-trivial tasks into ordered steps, dependencies, and risks before coding.
+  ALWAYS use when the user says "plan", "lên kế hoạch", "thiết kế", "design",
+  "how should I approach", "nên làm thế nào", "before I implement", "trước khi code",
+  or describes a task touching 2+ files or multiple moving parts.
+  Also trigger proactively for complex tasks without an explicit plan request.
 ---
 
 # b-plan
