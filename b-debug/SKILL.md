@@ -53,27 +53,7 @@ If sequential-thinking is unavailable: reason through hypotheses inline, documen
 
 Graceful degradation: ✅ Possible — if jcodemunch unavailable, use Glob/Grep/Read for file analysis. Quality is reduced but the skill remains functional.
 
-## Recommended model
-
-**Opus** (`/model opus`) — enforced by Step 0.
-
-Hypothesis ranking and root-cause tracing are the highest-stakes reasoning tasks in this suite. A wrong hypothesis wastes debugging time and produces incorrect fixes. Sonnet is prone to anchoring on surface symptoms rather than tracing the actual execution path.
-
----
-
 ## Steps
-
-### Step 0 — Model check
-
-This skill requires **Opus** for reliable output.
-
-Check the current model from the system context. If you are not running on Opus:
-- Output: "⚠️ b-debug requires Opus. Run `/model opus` then re-invoke."
-- **Stop. Do not proceed with any further steps.**
-
-If you are on Opus: continue to Step 1.
-
----
 
 ### Step 1 — Gather symptoms
 

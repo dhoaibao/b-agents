@@ -50,27 +50,7 @@ If jcodemunch is unavailable: Use `Glob` to map file structure and identify all 
 
 Graceful degradation: ✅ Possible — if jcodemunch unavailable, use Glob/Grep/Read for file analysis. Quality is reduced but the skill remains functional.
 
-## Recommended model
-
-**Opus** (`/model opus`) — enforced by Step 0.
-
-Multi-step structural reasoning: reading a codebase, ranking findings by severity, and producing concrete suggestions all require strong reasoning. Sonnet produces generic or incomplete findings on non-trivial codebases.
-
----
-
 ## Steps
-
-### Step 0 — Model check
-
-This skill requires **Opus** for reliable output.
-
-Check the current model from the system context. If you are not running on Opus:
-- Output: "⚠️ b-analyze requires Opus. Run `/model opus` then re-invoke."
-- **Stop. Do not proceed with any further steps.**
-
-If you are on Opus: continue to Step 1.
-
----
 
 ### Step 1 — Define analysis scope
 

@@ -32,14 +32,6 @@ If `brave-search` is unavailable: stop and tell the user:
 
 Graceful degradation: ❌ Not possible — requires live news data. Stop if MCP is unavailable.
 
-## Recommended model
-
-**Haiku** (`/model haiku`) — optimal for speed and cost.
-
-News aggregation is grouping + formatting fetched headlines. No deep analysis required. Haiku produces clean digests at lower cost and higher throughput than Sonnet.
-
----
-
 ## Trusted sources by domain
 
 Prefer results from domain-matched sources. Use the **Universal** tier as fallback when
@@ -63,16 +55,6 @@ domain-specific sources produce insufficient results.
 ---
 
 ## Steps
-
-### Step 0 — Model check
-
-This skill is optimized for **Haiku** (`/model haiku`) for speed and cost.
-
-Check the current model from the system context. If you are not running on Haiku:
-- Output: "💡 b-news runs best on Haiku. Run `/model haiku` for faster, cheaper digests."
-- **Continue anyway** — Haiku is recommended, not required. Any model can produce the digest.
-
----
 
 ### Step 1 — Parse user input
 

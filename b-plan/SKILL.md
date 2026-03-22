@@ -39,27 +39,7 @@ If jcodemunch is unavailable, or `index_folder` returns `file_count = 0`: use Gl
 
 Graceful degradation: ✅ Possible — if jcodemunch unavailable, use Glob/Read to inspect key files. If sequential-thinking unavailable, reason inline. Quality is reduced but the skill remains functional.
 
-## Recommended model
-
-**Opus** (`/model opus`) — enforced by Step 0.
-
-A plan with missing dependencies or wrong step ordering causes cascading failures across all subsequent implementation. Opus produces significantly more complete dependency graphs and risk identification than Sonnet on multi-file tasks.
-
----
-
 ## Steps
-
-### Step 0 — Model check
-
-This skill requires **Opus** for reliable output.
-
-Check the current model from the system context. If you are not running on Opus:
-- Output: "⚠️ b-plan requires Opus. Run `/model opus` then re-invoke."
-- **Stop. Do not proceed with any further steps.**
-
-If you are on Opus: continue to Step 1.
-
----
 
 ### Step 1 — Clarify scope
 
@@ -144,22 +124,16 @@ Open a new session and run:
 
 Note: 'new session' means running `claude` in a new terminal, or using `/clear` in the current terminal to reset context.
 
-**Model for the execution session:** Include this note in the printed output above so the user knows what model to start the next session with:
+When writing the plan file, assess the overall complexity of the plan and produce a `## Model hint` section at the top (below frontmatter) recommending a single model for the entire execution session:
 
-```
-💡 Recommended model for execution:
-  - Most steps (multi-file implementation): /model sonnet
-  - Steps marked [complex] or touching security/DB schema/async: /model opus
-  - Single-file, spec is fully defined: /model haiku
-  Rationale: this plan already did the heavy reasoning. Execution follows the plan — model tier can drop one level.
-```
-
-When writing the plan file, add a `## Model hint` section at the top (below frontmatter) listing any steps that require Opus due to complexity, so the executing session knows upfront:
+- **Opus**: plan has 7+ steps, involves security/auth, DB schema changes, async/concurrency design, or significant cross-cutting architecture decisions
+- **Sonnet**: plan is moderate (3–6 steps), touches multiple files but logic is well-defined
+- **Haiku**: plan is simple (≤2 steps), single file, spec is fully defined
 
 ```markdown
 ## Model hint
-- Default execution model: sonnet
-- Upgrade to opus for: [list specific step names/numbers, or "none"]
+- Recommended model: [opus / sonnet / haiku]
+- Reason: [one sentence — what makes this plan complex or simple]
 ```
 
 **Exception — simple tasks (≤4 steps, single file):** skip the file, plan and execute
