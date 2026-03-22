@@ -29,9 +29,9 @@ All 5 MCPs must be connected. Verify with `/mcp` in Claude Code.
 |---|---|---|
 | [`b-plan`](#b-plan) | sequential-thinking, jcodemunch* | Before writing code for any non-trivial task |
 | [`b-docs`](#b-docs) | context7, firecrawl* | Before using any library or SDK |
-| [`b-research`](#b-research) | brave-search, firecrawl, context7*, sequential-thinking* | Deep research, tool comparison, synthesis |
-| [`b-analyze`](#b-analyze) | jcodemunch, sequential-thinking*, brave-search* | Understand or review code before changing it |
-| [`b-debug`](#b-debug) | jcodemunch, sequential-thinking, brave-search*, firecrawl* | Trace bugs that have no obvious cause |
+| [`b-research`](#b-research) | brave-search (web+news), firecrawl, context7*, sequential-thinking* | Deep research, tool comparison, synthesis |
+| [`b-analyze`](#b-analyze) | jcodemunch (12 tools), sequential-thinking*, brave-search* | Understand or review code before changing it |
+| [`b-debug`](#b-debug) | jcodemunch (8 tools), sequential-thinking, brave-search*, firecrawl* | Trace bugs that have no obvious cause |
 | [`b-feature`](#b-feature) | all of the above | Full pipeline for complex feature development |
 
 *optional — used conditionally
@@ -40,7 +40,7 @@ All 5 MCPs must be connected. Verify with `/mcp` in Claude Code.
 
 | Skill | MCP(s) | Use when |
 |---|---|---|
-| [`b-quick-search`](#b-quick-search) | brave-search | Quick one-call web lookup for current info |
+| [`b-quick-search`](#b-quick-search) | brave-search (web+news) | Quick one-call web lookup for current info |
 | [`b-news`](#b-news) | brave-search, firecrawl* | Daily news digest on any user-specified topic |
 | [`b-sync`](#b-sync) | — | Sync skills from GitHub repo to any machine |
 

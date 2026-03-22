@@ -10,8 +10,9 @@ For quick overview and installation, see [README.md](README.md).
 Decomposes any non-trivial task into ordered steps, dependencies, and risks before
 any implementation begins. Uses `sequential-thinking` to reason through the happy path,
 identify blockers, and surface unknowns. For tasks that modify existing code, scans
-the codebase first with `jcodemunch` (`get_repo_outline`, `get_file_outline`) so the
-plan references real file paths and respects existing patterns.
+the codebase first with `jcodemunch` (`suggest_queries` → `get_repo_outline` →
+`get_file_outline` batch, `get_file_tree` for scoped dirs) so the plan references real
+file paths and respects existing patterns.
 
 **Good triggers:**
 ```
@@ -28,6 +29,8 @@ appended to the same file for use in the execution session.
 
 **Rule:** Never implement in the same session as planning for tasks with 5+ steps.
 End session 1 with the plan file, open a new session to execute.
+
+**English-only plan files:** Plan files are always written in English — regardless of the user's query language. This ensures plan files remain consistent and usable across language-switching sessions.
 
 ---
 
@@ -55,9 +58,14 @@ or returns context to b-feature pipeline depending on how it was called.
 
 ### b-research
 
-Deep research workflow: search with Brave → scrape full pages with Firecrawl → fetch
-versioned docs with Context7 (for library topics) → synthesize into a structured report
-with citations. Never relies on search snippets or training data alone.
+Deep research workflow: classify query type → search with type-specific tool → scrape
+full pages with Firecrawl → synthesize into a structured report with citations. Never
+relies on search snippets or training data alone.
+
+**Query type routing:**
+- `NEWS` queries → `brave_news_search` with `freshness: "pd"/"pw"` (not `brave_web_search`)
+- All other queries → `brave_web_search`
+- `HOWTO/API` queries → Context7 first, then Brave
 
 **Good triggers:**
 ```
@@ -70,21 +78,21 @@ deep dive into Redis Streams
 **Output:** Summary, key findings, optional comparison table, and cited sources.
 Context7 is used automatically when the topic is a library or framework.
 
-**Limits:** Max 5 URLs scraped per session, fetched in parallel. JS-heavy pages get
-one retry with `waitFor: 3000` before being skipped. If Brave returns fewer than 3
-relevant results, falls back to `firecrawl_search` which returns full content directly.
+**Limits:** Max 5 URLs scraped per session (7 for COMPARE), fetched in parallel. JS-heavy pages: retry with `waitFor: 5000/8000`, then `firecrawl_map` to find correct URL before skipping. If Brave returns fewer than 3 relevant results, falls back to `firecrawl_search`. For deep multi-page documentation: use `firecrawl_crawl` + poll `firecrawl_check_crawl_status` (async — do not proceed until `status: "completed"`).
 
 ---
 
 ### b-analyze
 
 Deep code analysis using jcodemunch — maps structure, measures complexity, identifies
-duplicate logic, and produces severity-ranked findings with concrete suggestions.
-Indexes the codebase first via `index_folder`, then runs `get_repo_outline` →
-`get_file_outline` → `get_dependency_graph` → `search_symbols`. For High findings
-that match a named anti-pattern, calls `brave_web_search` for a concrete refactoring
-suggestion. Uses `sequentialthinking` to produce a sprint-prioritized action list.
-Does not fix anything; produces findings only.
+duplicate logic, dead code, and OOP issues; produces severity-ranked findings with
+concrete suggestions. Indexes the codebase first via `index_folder`, then runs
+`suggest_queries` → `get_repo_outline` → `get_file_outline` (batch) →
+`get_dependency_graph` → `search_symbols`. For dead code: `check_references` +
+`find_importers`. For OOP: `get_class_hierarchy`. For pattern similarity: `get_related_symbols`.
+For magic numbers/hardcoded strings: `search_text`. For High findings matching a named
+anti-pattern, calls `brave_web_search`. Uses `sequentialthinking` to produce a
+sprint-prioritized action list. Does not fix anything; produces findings only.
 
 **Good triggers:**
 ```
@@ -100,17 +108,21 @@ and recommended next steps.
 **Distinction from b-debug:** Use b-analyze when code works but could be better.
 Use b-debug when something is broken.
 
+**b-debug handoff:** If analysis reveals a bug (broken logic, not just poor style) → state: 'Root cause analysis needed. Run: `b-debug: [symptom] in [entry point]` to trace the execution path.'
+
 ---
 
 ### b-debug
 
 Systematic, hypothesis-driven bug tracing. Indexes the codebase first via
-`index_folder`, then maps the full execution path with jcodemunch (`get_context_bundle`
-→ `find_references` → `get_blast_radius` → `get_symbol`), forms ranked hypotheses
-with sequential-thinking, confirms root cause, then fixes. For library-related errors,
-searches for known issues via `brave_web_search`, scrapes top 1–2 relevant GitHub
-issue/SO pages via `firecrawl_scrape`, and invokes `b-docs` to verify correct API
-behavior before verifying hypotheses. Never patches before root cause is confirmed.
+`index_folder`, then optionally calls `suggest_queries` (unfamiliar codebases), then
+maps the full execution path with jcodemunch (`get_context_bundle` → `find_references`
+→ `get_blast_radius` → `get_symbol`). For suspicious functions, uses `get_related_symbols`
+to find similar patterns elsewhere. For regression detection: `get_symbol_diff`. For
+error string origin: `search_text`. Forms ranked hypotheses with sequential-thinking,
+confirms root cause, then fixes. For library errors: `brave_web_search` → `firecrawl_scrape`
+(with `firecrawl_map` fallback when scrape returns empty) → `b-docs`. Never patches
+before root cause is confirmed.
 
 **Good triggers:**
 ```
@@ -125,6 +137,8 @@ minimal fix, and verification instructions.
 
 **Rule:** No patch is written until root cause is explicitly confirmed. Library errors
 trigger a web lookup and `b-docs` call before hypothesis verification.
+
+**Post-fix review:** If the fix introduced new code (new function, new module) → optionally run `b-analyze: [fixed module]` to verify no new complexity or duplication was introduced.
 
 ---
 
@@ -159,8 +173,32 @@ b-feature: add webhook signature verification
 
 **Rule:** Always prefix with `b-feature:` to guarantee trigger.
 
+**Mid-execution failure:** If a tool fails mid-execution → (a) document as `- [❌] Phase N — [brief reason]` in the plan file; (b) assess whether remaining phases depend on this output; (c) if a blocking dependency exists, pause and inform the user before continuing.
+
 **Not for:** Simple one-file edits (≤4 steps), bug fixes, or quick questions — those
 run faster without the full pipeline.
+
+---
+
+### b-sync
+
+Syncs Claude skills from the `b-agent-skills` GitHub repo to `~/.claude/skills/` using git + `sync.sh`. No MCP required — only the Bash tool.
+
+**Good triggers:**
+```
+sync b-skills
+update b-skills
+install b-skills on new machine
+đồng bộ skills
+cập nhật skills
+cài skills mới
+```
+
+**Modes:** BOOTSTRAP (first install: `git clone` + `sync.sh`) vs UPDATE (existing: `git pull` via `sync.sh`). Auto-detected by checking for `~/.b-agent-skills/.git`.
+
+**Output:** Before/after skill list diff — lists added and removed skills, total count. Validates symlinks and frontmatter after sync.
+
+**Distinction from other skills:** b-sync only manages skill installation — it does not invoke any other skill.
 
 ---
 
@@ -235,18 +273,30 @@ b-plan ──── modify existing code ────────► jcodemunch 
 b-docs ──── context7 has no index ──────► firecrawl   (direct scrape of official docs URL, single page)
        ──── firecrawl insufficient ────► b-research  (full multi-source research)
 
-b-debug ─── trace execution path ────────► jcodemunch (get_context_bundle → find_references → get_blast_radius → get_symbol)
+b-debug ─── trace execution path ────────► jcodemunch (suggest_queries → get_context_bundle → find_references → get_blast_radius → get_symbol → get_related_symbols)
+        ─── regression detection ────────► jcodemunch (get_symbol_diff)
+        ─── error string lookup ─────────► jcodemunch (search_text)
         ─── library error detected ──────► brave-search (lookup known issues)
-                                         ► firecrawl   (scrape top 1–2 relevant issue/SO pages, optional)
+                                         ► firecrawl_scrape (top 1–2 pages, optional)
+                                         ► firecrawl_map (if scrape empty, optional)
                                          ► b-docs      (verify API behavior)
 
-b-analyze ── findings need refactor ──────► b-plan    (sequence it safely)
+b-analyze ── unfamiliar codebase ─────────► jcodemunch (suggest_queries first)
+          ── dead code ─────────────────── ► jcodemunch (check_references + find_importers)
+          ── OOP hierarchy ──────────────► jcodemunch (get_class_hierarchy)
+          ── pattern similarity ──────────► jcodemunch (get_related_symbols)
+          ── magic numbers/strings ───────► jcodemunch (search_text)
+          ── findings need refactor ──────► b-plan    (sequence it safely)
           ── named anti-pattern found ────► brave-search (refactoring solution lookup, optional)
           ── prioritize sprint items ─────► sequential-thinking (ordered ROI action list, optional)
 
-b-research ── sources conflict ───────────► sequential-thinking (structured conflict resolution, optional)
+b-research ── news query ─────────────────► brave_news_search (freshness: pd/pw)
+           ── scrape returns empty ────────► firecrawl_map (discover correct URL, then retry)
+           ── deep multi-page docs ────────► firecrawl_crawl + check_crawl_status (async)
+           ── sources conflict ───────────► sequential-thinking (structured conflict resolution, optional)
 
-b-quick-search ── factual query ──────────► brave_summarizer (parallel, AI-synthesized answer)
+b-quick-search ── news/current-events ────► brave_news_search (freshness: pd/pw)
+               ── general lookup ─────────► brave_web_search
 
 b-feature ── orchestrates all ────────────► b-plan
                                           ► b-analyze  (understand existing)
@@ -265,9 +315,8 @@ b-feature ── orchestrates all ────────────► b-plan
 ### b-quick-search
 
 Single-call web lookup via Brave Search. Returns a fast, cited answer from the live
-web — no scraping, no deep synthesis. For factual queries (versions, prices, dates,
-definitions), also calls `brave_summarizer` in parallel to get an AI-synthesized
-answer alongside raw search results.
+web — no scraping, no deep synthesis. Routes to `brave_news_search` for news/current-events
+queries, `brave_web_search` for everything else.
 
 **Good triggers:**
 ```
@@ -275,10 +324,12 @@ b-quick-search: latest version of Node.js
 what's the current price of M4 MacBook Pro?
 latest release of Fedora?
 recent CVE for OpenSSL?
+latest news about OpenAI?
 ```
 
-**Output:** Direct answer with source citations. Factual queries use `brave_summarizer`
-output as the primary answer; multi-point queries get a short "Key findings" list.
+**Output:** Direct answer with source citations. Multi-point queries get a short "Key findings" list.
+
+**Query routing:** News/current-events → `brave_news_search` (`freshness: "pd"/"pw"`). Versions, prices, docs, CVEs → `brave_web_search`.
 
 **Distinction from b-research:** If one search can answer it → b-quick-search.
 If you need to read multiple full pages → b-research.
