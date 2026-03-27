@@ -19,20 +19,20 @@ If `$ARGUMENTS` is provided, treat it as a space-separated list of file paths or
 
 ## When to use
 
-- After all implementation steps in a b-plan session are complete
-- User says "gate", "b-gate", "check quality", "kiểm tra chất lượng", "validate before done"
-- Before opening a PR or handing off to code review
-- Any time the user wants a final quality check on changed code
+- After all implementation steps in a b-plan session are complete.
+- User says "gate", "b-gate", "check quality", "kiểm tra chất lượng", "validate before done".
+- Before opening a PR or handing off to code review.
+- Any time the user wants a final quality check on changed code.
 
 ## When NOT to use
 
-- During implementation (writing code, making incremental changes) → use **b-tdd** instead
+- During implementation (writing code, making incremental changes) → use **b-tdd** instead.
 - Deep code quality analysis or architecture review → use **b-analyze**
 - Debugging a broken feature → use **b-debug**
 
 ## Tools required
 
-- `Bash` — to run lint, typecheck, test, and security commands
+- `Bash` — to run lint, typecheck, test, and security commands.
 
 No MCP tools required.
 
@@ -191,9 +191,9 @@ On pass → next step: run **b-review** to verify logic correctness and requirem
 
 - Checks run in fixed order: lint → typecheck → tests → security → clean-code. Never reorder. **Why**: lint and typecheck catch syntax/type errors that would cause false test failures — running tests against broken code produces misleading output. Fix the foundation first.
 - Hard stop on: lint failure, typecheck failure, test failure, high/critical security finding. **Why**: these indicate the code is not shippable. Soft failures (formatting, medium security) do not block shipping but should be tracked.
-- Soft block (warn, continue) on: medium/low security findings, formatting failures
-- If a check is not configured, skip it and note it — do not fail because tooling is absent
-- Do not install missing tools — if a tool is absent, note "not installed" and skip
-- Never pass the gate with unresolved hard failures, even if the user asks to proceed
-- If the gate fails, do not rerun the full suite after partial fixes — run only the failing check to confirm the fix before re-running the full gate
+- Soft block (warn, continue) on: medium/low security findings, formatting failures.
+- If a check is not configured, skip it and note it — do not fail because tooling is absent.
+- Do not install missing tools — if a tool is absent, note "not installed" and skip.
+- Never pass the gate with unresolved hard failures, even if the user asks to proceed.
+- If the gate fails, do not rerun the full suite after partial fixes — run only the failing check to confirm the fix before re-running the full gate.
 - Security check scope: only the project's direct and transitive dependencies. Do not scan external infrastructure.

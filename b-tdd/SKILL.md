@@ -15,15 +15,15 @@ before a failing test exists. Each step follows Red-Green-Refactor strictly.
 
 ## When to use
 
-- Starting any implementation step that touches production code
-- User asks for "tdd", "test first", "viết test trước", "red-green-refactor"
-- Executing a b-plan where the steps involve writing new behavior
-- User wants explicit discipline checkpoints during coding
+- Starting any implementation step that touches production code.
+- User asks for "tdd", "test first", "viết test trước", "red-green-refactor".
+- Executing a b-plan where the steps involve writing new behavior.
+- User wants explicit discipline checkpoints during coding.
 
 ## When NOT to use
 
-- Writing configuration, infra, or pure data migration with no testable logic → skip Iron Law
-- Quick single-line fix where a test would be disproportionate → note the exception explicitly
+- Writing configuration, infra, or pure data migration with no testable logic → skip Iron Law.
+- Quick single-line fix where a test would be disproportionate → note the exception explicitly.
 - After all code is written and tests need retroactive review → use **b-gate**
 
 ## Tools required
@@ -40,8 +40,8 @@ Before writing any code, detect the project's test tooling:
 
 - **Node.js**: look for `jest`, `vitest`, `mocha` in `package.json` (devDependencies or scripts)
 - **Python**: look for `pytest`, `unittest` in `pyproject.toml`, `setup.cfg`, or `requirements*.txt`
-- **Go**: built-in `go test` — look for `_test.go` files for naming conventions
-- **Other**: look for a `Makefile` `test` target or `scripts/test.*` file
+- **Go**: built-in `go test` — look for `_test.go` files for naming conventions.
+- **Other**: look for a `Makefile` `test` target or `scripts/test.*` file.
 
 If no test tooling is found: stop and inform the user — "No test runner detected. Add a test framework before applying TDD." Do not proceed with production code.
 
@@ -64,10 +64,10 @@ For each implementation step:
 
 Write the smallest amount of production code that makes the failing test pass:
 
-- Do not add behavior not covered by the current test
-- Do not optimize yet — correctness first
-- Run the test suite again and confirm the target test now passes
-- Confirm no previously passing tests regressed
+- Do not add behavior not covered by the current test.
+- Do not optimize yet — correctness first.
+- Run the test suite again and confirm the target test now passes.
+- Confirm no previously passing tests regressed.
 
 If the test still fails: read the error message carefully. Fix production code only — do not weaken the test to make it pass.
 
@@ -77,10 +77,10 @@ If the test still fails: read the error message carefully. Fix production code o
 
 With the test green, clean up:
 
-- Remove duplication introduced in the Green step
-- Apply naming improvements
-- Extract helper functions if logic exceeds one clear responsibility
-- Run tests again after every refactor change — keep them green throughout
+- Remove duplication introduced in the Green step.
+- Apply naming improvements.
+- Extract helper functions if logic exceeds one clear responsibility.
+- Run tests again after every refactor change — keep them green throughout.
 
 **Rule**: refactor ends when the code is as clean as it needs to be, not when it is perfect. Move to the next step.
 
@@ -92,9 +92,9 @@ With the test green, clean up:
 
 For each remaining implementation step in the plan:
 
-- Return to Step 2 (Red) for the next behavior
-- Each b-plan step = one Red-Green-Refactor cycle minimum
-- Some plan steps may require multiple RGR cycles for edge cases — that is expected
+- Return to Step 2 (Red) for the next behavior.
+- Each b-plan step = one Red-Green-Refactor cycle minimum.
+- Some plan steps may require multiple RGR cycles for edge cases — that is expected.
 - Check off the plan file step after each RGR cycle completes (see Step 4)
 
 ---
@@ -134,10 +134,10 @@ Tests: [N passed, 0 failed]
 
 ## Rules
 
-- Never write production code before a failing test — no exceptions without explicit documentation
-- Never modify a test to make it pass — only production code changes during Green
-- Never skip refactor — leaving messy Green code accumulates debt
+- Never write production code before a failing test — no exceptions without explicit documentation.
+- Never modify a test to make it pass — only production code changes during Green.
+- Never skip refactor — leaving messy Green code accumulates debt.
 - Document any Iron Law exception inline: `// b-tdd exception: [reason]`
 - If a step has no testable logic (pure config, pure data), mark it explicitly: `[Step N: no test required — config only]`
-- Stack detection happens once per session — do not re-detect for every step
-- Size heuristic: if a task is ≤2 files and ≤3 steps, b-tdd is still applicable but RGR cycles can be lighter
+- Stack detection happens once per session — do not re-detect for every step.
+- Size heuristic: if a task is ≤2 files and ≤3 steps, b-tdd is still applicable but RGR cycles can be lighter.

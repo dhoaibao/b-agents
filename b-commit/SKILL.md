@@ -20,14 +20,14 @@ If `$ARGUMENTS` is provided, treat it as the commit scope or intent
 
 ## When to use
 
-- After b-gate passes and b-review gives READY FOR PR
-- User says "commit", "viết commit message", "tạo commit", "PR description", "tạo PR"
-- Finalizing a b-plan execution session
+- After b-gate passes and b-review gives READY FOR PR.
+- User says "commit", "viết commit message", "tạo commit", "PR description", "tạo PR".
+- Finalizing a b-plan execution session.
 
 ## When NOT to use
 
-- b-gate has not passed yet → run **b-gate** first
-- b-review has not passed yet → run **b-review** first
+- b-gate has not passed yet → run **b-gate** first.
+- b-review has not passed yet → run **b-review** first.
 
 ## Tools required
 
@@ -48,8 +48,8 @@ git diff --stat HEAD
 ```
 
 Understand:
-- **What behavior changed** — not just which lines, but what the code now does differently
-- **Why this change was made** — from plan file (`.claude/b-plans/`) or conversation context
+- **What behavior changed** — not just which lines, but what the code now does differently.
+- **Why this change was made** — from plan file (`.claude/b-plans/`) or conversation context.
 - **Atomicity** — is this one logical unit, or mixed concerns?
 
 If the diff mixes unrelated changes (e.g. feature + unrelated refactor + formatting fix): note this in the output and suggest the user split into separate commits before applying.
@@ -66,9 +66,9 @@ If the diff mixes unrelated changes (e.g. feature + unrelated refactor + formatt
 ```
 
 **Subject line:**
-- Imperative mood: "add", "fix", "remove", "update" — not "added", "fixes"
-- ≤72 characters
-- No period at end
+- Imperative mood: "add", "fix", "remove", "update" — not "added", "fixes".
+- ≤72 characters.
+- No period at end.
 - Behavior-level description, not file-level ("add retry logic" not "update queue.ts")
 
 **Types:**
@@ -83,9 +83,9 @@ If the diff mixes unrelated changes (e.g. feature + unrelated refactor + formatt
 | `perf` | Performance improvement |
 
 **Body** — include when:
-- The *why* is not obvious from the subject
-- A non-trivial design decision was made
-- The fix addresses a subtle root cause worth preserving in history
+- The *why* is not obvious from the subject.
+- A non-trivial design decision was made.
+- The fix addresses a subtle root cause worth preserving in history.
 
 Body explains *why*, not *what* — the diff already shows what.
 
@@ -142,8 +142,8 @@ Body explains *why*, not *what* — the diff already shows what.
 
 ## Rules
 
-- Output text only — never execute git commands, never stage, never push, never create PR
+- Output text only — never execute git commands, never stage, never push, never create PR.
 - Body is for *why*, not *what*
-- If diff is unreadable (too large or binary), ask the user to describe the change instead
-- If plan file exists, use it as the primary source for *why* — do not invent reasons
-- Flag mixed commits but do not refuse to produce the message — user decides whether to split
+- If diff is unreadable (too large or binary), ask the user to describe the change instead.
+- If plan file exists, use it as the primary source for *why* — do not invent reasons.
+- Flag mixed commits but do not refuse to produce the message — user decides whether to split.

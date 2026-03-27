@@ -1,11 +1,12 @@
 ---
 name: b-news
 description: >
-  Aggregate and summarize today's top news from any domain into a grouped digest.
+  Aggregate and summarize today's news from any domain into a grouped digest.
   ALWAYS use when the user says "tin tức", "news hôm nay", "có gì mới", "điểm tin",
   "b-news", or asks for news about any topic (tech, finance, science, politics, AI, crypto, etc.).
-  Accepts user-defined topics as input. Trigger even for short queries like "hôm nay có gì mới không"
+  Accepts user-defined topics as input. Trigger for short queries like "hôm nay có gì mới không"
   or topic-specific like "tin tức tài chính hôm nay".
+  Distinct from b-quick-search: b-news returns grouped digests, while b-quick-search answers one-off lookups.
 ---
 
 # b-news
@@ -15,11 +16,11 @@ then groups stories by sub-topic into a clean bilingual daily digest.
 
 ## When to use
 - User asks for news on any topic: tech, AI, finance, science, politics, health, crypto, etc.
-- User says "b-news [topic]" or "tin tức [topic] hôm nay"
-- Generic news request with no topic → default to general tech
+- User says "b-news [topic]" or "tin tức [topic] hôm nay".
+- Generic news request with no topic → default to general tech.
 
 ## When NOT to use
-- User wants deep analysis or a research report → use `b-research` instead
+- User wants deep analysis or a research report → use `b-research` instead.
 - User needs a single fact, latest version, or a single news answer → use `b-quick-search` instead (b-news produces a grouped digest, not a single answer)
 
 ## Tools required
@@ -70,9 +71,9 @@ domains (e.g., "AI in healthcare"), select sources from both relevant domains.
 ### Step 2 — Generate search queries
 
 Generate **3 to 5 queries** based on extracted topics, covering different angles:
-- 1 broad query per major topic
-- 1 focused query on recent developments or key players in that space
-- If user has ≥ 2 topics: allocate ~2 queries per topic, cap at 5 total
+- 1 broad query per major topic.
+- 1 focused query on recent developments or key players in that space.
+- If user has ≥ 2 topics: allocate ~2 queries per topic, cap at 5 total.
 
 Examples:
 - Topic `AI`: → `"artificial intelligence latest news"`, `"OpenAI Google DeepMind update"`
@@ -98,21 +99,21 @@ From each result, collect: headline, URL, 1-sentence snippet, source domain, pub
 ### Step 4 — Filter and select sources
 
 From all collected stories (~15–25 total):
-- **Prefer** stories from domain-matched trusted sources in Step 1
-- **Accept** stories from Universal tier (reuters, apnews, bbc) regardless of domain
-- **Discard**: duplicates covering the same event (keep the best source), opinion pieces,
+- **Prefer** stories from domain-matched trusted sources in Step 1.
+- **Accept** stories from Universal tier (reuters, apnews, bbc) regardless of domain.
+- **Discard**: duplicates covering the same event (keep the best source), opinion pieces,.
   sponsored content, listicles ("10 best…"), and stories older than 48 hours
-- **Keep**: max 3 stories per sub-topic category — quality over quantity
+- **Keep**: max 3 stories per sub-topic category — quality over quantity.
 
 ### Step 5 — Categorize dynamically
 
 Derive categories from the actual topics found in results — do NOT use hardcoded category sets.
 
 Category rules:
-- Create one category per distinct sub-topic identified in the results
+- Create one category per distinct sub-topic identified in the results.
 - Name each category with a relevant emoji + label (e.g., `🤖 AI & Machine Learning`, `💰 Markets`, `🔬 Research`)
-- Omit any category with 0 stories — never pad with weak content
-- Use a `📌 Other` catch-all only when a story doesn't fit any derived category
+- Omit any category with 0 stories — never pad with weak content.
+- Use a `📌 Other` catch-all only when a story doesn't fit any derived category.
 
 ### Step 6 — Scrape for detail (on demand only)
 
@@ -125,9 +126,9 @@ Do NOT bulk-scrape during initial digest generation.
 ## Output format
 
 **Language detection**: Check the user's query language before formatting.
-- Vietnamese query ("tin tức", "điểm tin", "hôm nay có gì mới") → bilingual output
-- English query ("news today", "what's new in X") → English-only output
-- Ambiguous or mixed → default to bilingual
+- Vietnamese query ("tin tức", "điểm tin", "hôm nay có gì mới") → bilingual output.
+- English query ("news today", "what's new in X") → English-only output.
+- Ambiguous or mixed → default to bilingual.
 
 The header title reflects the actual topics, not a generic label.
 
@@ -168,12 +169,12 @@ The header title reflects the actual topics, not a generic label.
 
 ## Rules
 
-- Always include today's actual date in the header
-- Always run all search queries in parallel — never sequentially
-- Never use `site:` operator or boolean `OR` in queries
-- Max 3 stories per category — cut weakest stories if more found
-- Omit empty categories rather than padding with weak content
-- Do not scrape during digest generation — search snippets are sufficient
-- Vietnamese translations must be natural, not literal word-for-word
-- Footer must list the actual source domains that returned results, not the full trusted-sources table
+- Always include today's actual date in the header.
+- Always run all search queries in parallel — never sequentially.
+- Never use `site:` operator or boolean `OR` in queries.
+- Max 3 stories per category — cut weakest stories if more found.
+- Omit empty categories rather than padding with weak content.
+- Do not scrape during digest generation — search snippets are sufficient.
+- Vietnamese translations must be natural, not literal word-for-word.
+- Footer must list the actual source domains that returned results, not the full trusted-sources table.
 - If user specifies no topic, default to tech news (backward compatible with existing trigger phrases)

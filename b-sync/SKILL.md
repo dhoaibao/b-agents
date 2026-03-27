@@ -13,28 +13,28 @@ Syncs Claude skills from the public `b-agent-skills` GitHub repo to `~/.claude/s
 
 ## When to use
 
-- First-time setup of b-skills on a new machine
-- Updating skills after new skills are added or existing ones are changed
-- User says: "sync b-skills", "update b-skills", "đồng bộ skills", "cập nhật skills", "cài skills mới"
+- First-time setup of b-skills on a new machine.
+- Updating skills after new skills are added or existing ones are changed.
+- User says: "sync b-skills", "update b-skills", "đồng bộ skills", "cập nhật skills", "cài skills mới".
 
 ## When NOT to use
 
-- User wants to run a specific skill → invoke that skill directly
-- User wants to create a new skill → follow the new skill creation guide in CLAUDE.md
-- User wants to edit an existing skill → edit the SKILL.md file directly
+- User wants to run a specific skill → invoke that skill directly.
+- User wants to create a new skill → follow the new skill creation guide in CLAUDE.md.
+- User wants to edit an existing skill → edit the SKILL.md file directly.
 
 ## How it works
 
 - `~/.b-agent-skills/` — local clone of the repo (source of truth)
-- `~/.claude/skills/<skill-name>` — symlinks pointing into the clone
-- Updating = `git pull` → symlinks stay valid automatically
-- Stale symlinks (skills removed from repo) are cleaned up automatically on each sync
+- `~/.claude/skills/<skill-name>` — symlinks pointing into the clone.
+- Updating = `git pull` → symlinks stay valid automatically.
+- Stale symlinks (skills removed from repo) are cleaned up automatically on each sync.
 
 ## Tools required
 
 - `Bash` tool — to run `git` and `sync.sh` commands (built-in, always available)
 
-Graceful degradation: ✅ Not applicable — b-sync requires only Bash/git, no MCP server needed.
+Graceful degradation: ✅ Possible — b-sync requires only Bash/git and does not depend on MCP servers.
 
 ## Commands
 
@@ -60,11 +60,11 @@ This will:
 ## What sync.sh does (for reference)
 
 - Pulls latest from `main`
-- Scans all root-level folders in the repo
+- Scans all root-level folders in the repo.
 - Symlinks folders that contain a `SKILL.md` into `~/.claude/skills/`
-- Removes stale symlinks for skills deleted from the repo
+- Removes stale symlinks for skills deleted from the repo.
 - Skips anything without a `SKILL.md` (e.g. `sync.sh` itself, `README.md`)
-- Safe to re-run anytime — idempotent
+- Safe to re-run anytime — idempotent.
 
 ## Adding a new skill to the repo
 
@@ -79,8 +79,8 @@ This will:
 
 Run: `[ -d ~/.b-agent-skills/.git ] && echo "UPDATE" || echo "BOOTSTRAP"`
 
-- If `UPDATE`: tell the user "Updating existing b-skills install..."
-- If `BOOTSTRAP`: tell the user "Bootstrapping b-skills on this machine..."
+- If `UPDATE`: tell the user "Updating existing b-skills install...".
+- If `BOOTSTRAP`: tell the user "Bootstrapping b-skills on this machine...".
 
 ### Step 2 — Snapshot current state
 
@@ -110,17 +110,17 @@ ls -la ~/.claude/skills/ | grep "^l"
 grep -rL 'name:' ~/.claude/skills/*/SKILL.md 2>/dev/null
 ```
 
-- First command lists all active symlinks — confirms sync worked
-- Second command flags any skills missing required `name:` frontmatter
-- If any skill is flagged → tell the user which skill has broken frontmatter
+- First command lists all active symlinks — confirms sync worked.
+- Second command flags any skills missing required `name:` frontmatter.
+- If any skill is flagged → tell the user which skill has broken frontmatter.
 
 ### Step 5 — Report changes
 
 Compare the before list (Step 2) vs current `ls ~/.claude/skills/`:
 
-- **Added**: names in current but not in before
-- **Removed**: names in before but not in current
-- **Total installed**: count of current skills
+- **Added**: names in current but not in before.
+- **Removed**: names in before but not in current.
+- **Total installed**: count of current skills.
 
 Print summary:
 
@@ -166,7 +166,7 @@ If bootstrap mode, prefix with: `🆕 Bootstrapped b-skills on this machine.`
 
 ## Rules
 
-- Always snapshot the before-state (Step 2) so the report can show what changed
-- Never modify skill files during sync — b-sync only installs, it does not edit
-- If `sync.sh` fails, diagnose the error — do not retry blindly
-- Always verify symlinks after sync (Step 4) before reporting success
+- Always snapshot the before-state (Step 2) so the report can show what changed.
+- Never modify skill files during sync — b-sync only installs, it does not edit.
+- If `sync.sh` fails, diagnose the error — do not retry blindly.
+- Always verify symlinks after sync (Step 4) before reporting success.

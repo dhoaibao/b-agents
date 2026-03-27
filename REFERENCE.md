@@ -2,21 +2,20 @@
 
 Detailed reference for all skills in the b-agent-skills suite.
 For quick overview and installation, see [README.md](README.md).
+Formatting note: bullet style is standardized across all skill specs for consistent readability.
 
 ## Skill reference
 
 ### b-plan
 
-Decomposes any non-trivial task into ordered steps, dependencies, and risks before
-any implementation begins. Includes a built-in **feasibility gate (Step 0)** — run
-conditionally when scope is uncertain, to confirm the Understanding Lock and check for
-architectural blockers before planning. Uses `sequential-thinking` to reason through
-the happy path, identify blockers, and surface unknowns. For tasks that modify existing
-code, scans the codebase first with `jcodemunch` (`suggest_queries` → `get_repo_outline` →
-`get_file_outline` batch, `get_file_tree` for scoped dirs) so the plan references real
-file paths and respects existing patterns. The decomposition step includes an
-**architecture trade-off checkpoint** — surfaces structural choices and documents the
-decision explicitly.
+Decomposes non-trivial tasks into ordered steps, dependencies, and risks before
+implementation. Includes a conditional **feasibility gate (Step 0)** for uncertain scope
+to confirm Understanding Lock, blockers, and effort. Uses `sequential-thinking` for
+decomposition and unknown/risk surfacing. For modify-existing-code tasks, scans with
+`jcodemunch` (`suggest_queries` → `get_repo_outline` → `get_file_outline` batch, optional
+`get_file_tree`) so plans reference real paths/symbols and follow existing patterns.
+Includes an explicit **architecture trade-off checkpoint** and a plan-file handoff for
+execution in a fresh session.
 
 **Good triggers:**
 ```
@@ -324,7 +323,7 @@ For any non-trivial feature, use the standard pipeline:
 4. b-tdd                   → implement with Iron Law + Red-Green-Refactor per step
 5. b-gate                  → lint → typecheck → tests → security → clean-code
 6. b-review: [task]        → logic, requirements coverage, edge cases, test adequacy
-7. b-commit: [task]        → stage files, commit message, PR description
+7. b-commit: [task]        → commit message + PR description text
 ```
 b-plan's execution section automates steps 2 and 5 (b-analyze at start, b-gate at end).
 
@@ -364,7 +363,7 @@ For full control over each step:
 4. b-tdd                   → implement with Red-Green-Refactor discipline
 5. b-gate                  → automated quality validation
 6. b-review: [task]        → human-judgment review (logic, requirements, tests)
-7. b-commit: [task]        → stage, commit, PR
+7. b-commit: [task]        → commit message + PR description text
 ```
 You control the pace at each step. b-plan's execution section automates steps 2 and 5.
 

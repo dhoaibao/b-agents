@@ -19,10 +19,10 @@ If `$ARGUMENTS` is provided, parse it as `[library] [topic]` (e.g. `sendgrid sen
 
 ## When to use
 
-- User asks how to use a specific library, SDK, or framework feature
+- User asks how to use a specific library, SDK, or framework feature.
 - User is about to implement integration with a third-party service (SendGrid, Mailgun, AWS SES, Stripe, etc.)
-- User asks "does X support Y?", "what's the API for X?", "how to configure X?"
-- Before implementing ANY code that calls an external library — even familiar ones
+- User asks "does X support Y?", "what's the API for X?", "how to configure X?".
+- Before implementing ANY code that calls an external library — even familiar ones.
 - When context says the project uses a specific version (e.g. `sendgrid@8`, `bullmq@5`)
 
 ## When NOT to use
@@ -33,12 +33,12 @@ If `$ARGUMENTS` is provided, parse it as `[library] [topic]` (e.g. `sendgrid sen
 
 ## Tools required
 
-- `resolve-library-id` — from `context7` MCP server
-- `query-docs` — from `context7` MCP server
+- `resolve-library-id` — from `context7` MCP server.
+- `query-docs` — from `context7` MCP server.
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, fallback when context7 has no index)*
 
 If context7 is unavailable:
-- Tell the user: "❌ context7 MCP is not connected. Please check `/mcp`."
+- Tell the user: "❌ context7 MCP is not connected. Please check `/mcp`.".
 - Do NOT fall back to training data for API details — offer to use `b-research` to scrape official docs instead.
 
 Graceful degradation: ⚠️ Partial — fallback chain: context7 → firecrawl (direct scrape of official docs) → b-research (full research pipeline).
@@ -65,7 +65,7 @@ If multiple libraries are involved (e.g. "integrate Mailgun with Express"), run 
 Call `resolve-library-id` with the library name.
 
 - If multiple results return, pick the one with the highest match and correct scope (e.g. prefer `@sendgrid/mail` over a community fork)
-- If no result found: try the firecrawl direct-scrape fallback (see below) before escalating to b-research
+- If no result found: try the firecrawl direct-scrape fallback (see below) before escalating to b-research.
 
 **Firecrawl direct-scrape fallback** *(when context7 has no index for a library)*:
 If the library has a well-known official docs URL (e.g. docs.sendgrid.com, docs.bullmq.io, docs.stripe.com) → call `firecrawl_scrape` on that URL with `formats: ["markdown"], onlyMainContent: true`. If the scrape returns ≥300 words of relevant content → use it directly as the doc source, skip b-research. If the scrape fails or returns <300 words → then escalate to b-research: tell the user "⚠️ context7 has no index for `[library]` and direct scrape was insufficient. Falling back to b-research to scrape official docs."
@@ -75,7 +75,7 @@ If the library has a well-known official docs URL (e.g. docs.sendgrid.com, docs.
 ### Step 3 — Fetch docs
 
 Call `query-docs` with:
-- The resolved library ID from Step 2
+- The resolved library ID from Step 2.
 - `topic`: the specific feature area (keep focused — don't fetch entire docs)
 - `tokens`: 8000 for simple APIs, 12000–15000 for complex ones (auth flows, multi-method APIs, SDK setup)
 
@@ -87,11 +87,11 @@ Repeat with a different `topic` if the user's task spans multiple API areas (e.g
 
 From the fetched docs, extract only what's needed for the user's task:
 
-- Correct method names and signatures
-- Required vs optional parameters
+- Correct method names and signatures.
+- Required vs optional parameters.
 - Authentication setup (especially if it changed between versions)
-- Error codes and exception types
-- Any deprecation notices or breaking changes relevant to the user's version
+- Error codes and exception types.
+- Any deprecation notices or breaking changes relevant to the user's version.
 
 **Do not dump the entire docs.** Summarize the relevant section, show the key API surface, then implement or answer the user's question based on that.
 
@@ -101,7 +101,7 @@ From the fetched docs, extract only what's needed for the user's task:
 
 Present the extracted API surface. Then route based on context:
 
-- **Lookup only** ("how does X work?") → stop here, output lookup format below
+- **Lookup only** ("how does X work?") → stop here, output lookup format below.
 - **User requested implementation** → write the code using the fetched docs; add a one-line comment on non-obvious API calls: `// per Context7: sendgrid v8 uses dynamic templates`
 - **Called from b-plan pipeline** → return the fetched doc context. Append key API notes to the plan file's `## Docs` section.
 
@@ -134,9 +134,9 @@ For a lookup-only request ("how does X work?"):
 
 For an implementation request ("implement X using Y"):
 
-- Skip the lookup-only format
-- Write the implementation directly, informed by the fetched docs
-- Add a one-line comment citing Context7 on any non-obvious API call
+- Skip the lookup-only format.
+- Write the implementation directly, informed by the fetched docs.
+- Add a one-line comment citing Context7 on any non-obvious API call.
 
 ---
 
@@ -157,8 +157,8 @@ When the task spans multiple areas, run `query-docs` once per topic rather than 
 
 ## Rules
 
-- Never implement library code from training data alone — always fetch first
-- If context7 returns docs for a different major version than the project uses, flag it explicitly: "⚠️ Context7 returned docs for v3 but your package.json shows v8 — API may differ"
-- Keep topic queries focused — broad topic = too much noise, wrong section fetched
-- If docs are sparse or unhelpful, escalate to `b-research` to scrape official docs directly
-- One `query-docs` call per distinct API area — don't batch unrelated topics in one fetch
+- Never implement library code from training data alone — always fetch first.
+- If context7 returns docs for a different major version than the project uses, flag it explicitly: "⚠️ Context7 returned docs for v3 but your package.json shows v8 — API may differ".
+- Keep topic queries focused — broad topic = too much noise, wrong section fetched.
+- If docs are sparse or unhelpful, escalate to `b-research` to scrape official docs directly.
+- One `query-docs` call per distinct API area — don't batch unrelated topics in one fetch.

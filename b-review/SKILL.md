@@ -23,10 +23,10 @@ requirements baseline for Step 2.
 
 ## When to use
 
-- After b-gate passes, before committing or opening a PR
-- User says "review before PR", "kiểm tra logic trước khi push", "what would a reviewer flag"
-- Validating that the implementation actually fulfills the original requirements
-- Checking if test coverage is adequate for the behavior that was changed
+- After b-gate passes, before committing or opening a PR.
+- User says "review before PR", "kiểm tra logic trước khi push", "what would a reviewer flag".
+- Validating that the implementation actually fulfills the original requirements.
+- Checking if test coverage is adequate for the behavior that was changed.
 
 ## When NOT to use
 
@@ -37,8 +37,8 @@ requirements baseline for Step 2.
 
 ## Tools required
 
-- `Bash` — to read git diff and changed file list
-- `sequentialthinking` — from `sequential-thinking` MCP server — structured review reasoning
+- `Bash` — to read git diff and changed file list.
+- `sequentialthinking` — from `sequential-thinking` MCP server — structured review reasoning.
 - `get_symbol_source`, `get_context_bundle` — from `jcodemunch` MCP server *(optional, for reading full context of changed symbols)*
 
 If sequential-thinking is unavailable: reason through review dimensions inline, document each explicitly.
@@ -60,7 +60,7 @@ git diff main...HEAD
 ```
 
 Extract:
-- **Files changed**: list of modified, added, deleted files
+- **Files changed**: list of modified, added, deleted files.
 - **Changed lines**: what was added (+) and removed (-)
 - **Scope**: how wide is the change? (1 file vs 10 files is a different review depth)
 
@@ -126,11 +126,11 @@ Flag any requirement that is ❌ or ⚠️ as a blocker before PR.
 ### Step 5 — Edge case and test adequacy check
 
 **Edge cases to check** (based on the type of change):
-- Empty input, zero values, negative numbers
-- Maximum/minimum boundary values
-- Concurrent or repeated invocations
+- Empty input, zero values, negative numbers.
+- Maximum/minimum boundary values.
+- Concurrent or repeated invocations.
 - Failure of downstream dependencies (DB down, API timeout)
-- Unexpected input types
+- Unexpected input types.
 
 **Test adequacy check**:
 - Does a test exist for each requirement from Step 2?
@@ -202,10 +202,10 @@ Suggestions (non-blocking):
 
 ## Rules
 
-- Never review without a requirements baseline — a review without knowing what was intended produces noise, not signal
-- Blocker = anything that would cause a reviewer to request changes before merge
-- Suggestion = improvement that does not block correctness or requirement fulfillment
-- Do not re-run automated checks (lint, tests) — b-gate owns that; b-review owns human judgment
-- If logic is too complex to understand without running it, say so — do not guess
-- Keep the diff scope in mind: a 3-line fix needs a lighter review than a 200-line feature
-- If requirements are not fulfillable with the current implementation, state clearly: "Requirement X is not met — the implementation does Y instead of Z"
+- Never review without a requirements baseline — a review without knowing what was intended produces noise, not signal.
+- Blocker = anything that would cause a reviewer to request changes before merge.
+- Suggestion = improvement that does not block correctness or requirement fulfillment.
+- Do not re-run automated checks (lint, tests) — b-gate owns that; b-review owns human judgment.
+- If logic is too complex to understand without running it, say so — do not guess.
+- Keep the diff scope in mind: a 3-line fix needs a lighter review than a 200-line feature.
+- If requirements are not fulfillable with the current implementation, state clearly: "Requirement X is not met — the implementation does Y instead of Z".
