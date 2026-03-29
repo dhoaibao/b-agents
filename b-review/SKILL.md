@@ -44,7 +44,7 @@ requirements baseline for Step 2.
 If sequential-thinking is unavailable: reason through review dimensions inline, document each explicitly.
 If jcodemunch is unavailable: use Read tool to inspect changed files directly.
 
-Graceful degradation: ✅ Possible — core review works with Bash + Read. sequential-thinking improves structure of findings; jcodemunch improves symbol context. Both optional.
+Graceful degradation: ✅ Possible — core review works with Bash + Read. sequential-thinking improves structure of findings; jcodemunch improves symbol context. All optional.
 
 ## Steps
 

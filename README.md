@@ -37,7 +37,7 @@ All 5 MCPs must be connected. Verify with `/mcp` in Claude Code.
 | [`b-review`](#b-review) | sequential-thinking, jcodemunch* | After b-gate — logic, requirements, edge cases, test adequacy |
 | [`b-commit`](#b-commit) | — (Bash only) | After b-review — generate commit message and PR description text (no git execution) |
 | [`b-docs`](#b-docs) | context7, firecrawl* | Before using any library or SDK |
-| [`b-research`](#b-research) | brave-search (web+news), firecrawl, context7*, sequential-thinking* | Deep research, tool comparison, synthesis |
+| [`b-research`](#b-research) | brave-search (web+news), firecrawl, context7*, sequential-thinking*, Agent* | Deep research, tool comparison, synthesis |
 | [`b-analyze`](#b-analyze) | jcodemunch (12 tools), sequential-thinking*, brave-search* | Understand or review code before changing it (pre-implementation only) |
 | [`b-debug`](#b-debug) | jcodemunch (9 tools), sequential-thinking, brave-search*, firecrawl* | Trace bugs that have no obvious cause |
 

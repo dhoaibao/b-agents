@@ -80,11 +80,11 @@ Use `jcodemunch` to map the target code in this order:
 
 1. **Index or resolve** — first call `resolve_repo(path="/absolute/project/root")`. If it returns a repo identifier, use it directly (index already exists). If it returns no match, call `index_folder` with the absolute path to the project root (e.g. `/home/user/my-project`) and `use_ai_summaries: false`. Note the `repo` identifier returned in the response (format: `local/[name]-[hash]`) — you must pass this as `repo` to every subsequent jcodemunch call.
    - If `file_count` returns 0 or `symbol_count` is 0, jcodemunch does not support this file type (e.g. Markdown, config-only repos) → switch to the Glob/Grep fallback immediately.
-1.5. **suggest_queries** (repo: ...) — call immediately after indexing. This auto-surfaces entry points, language distribution, and key architectural symbols. Use the output to focus subsequent queries on the most significant areas rather than scanning everything.
-2. `get_repo_outline` (repo: the identifier from step 1) — overview of all modules, files, and top-level symbols
-3. `get_file_outline` (batch: pass `file_paths=[...]` with the most relevant files from step 1.5) — inspect each file for functions, classes, and exports; use batch mode to load multiple files in one call instead of calling one at a time
-4. `get_dependency_graph` — map module coupling; look for circular deps and tight coupling
-5. `search_symbols` — find duplicate or similarly-named functions across files
+2. **suggest_queries** (repo: ...) — call immediately after indexing. This auto-surfaces entry points, language distribution, and key architectural symbols. Use the output to focus subsequent queries on the most significant areas rather than scanning everything.
+3. `get_repo_outline` (repo: the identifier from step 1) — overview of all modules, files, and top-level symbols
+4. `get_file_outline` (batch: pass `file_paths=[...]` with the most relevant files from step 2) — inspect each file for functions, classes, and exports; use batch mode to load multiple files in one call instead of calling one at a time
+5. `get_dependency_graph` — map module coupling; look for circular deps and tight coupling
+6. `search_symbols` — find duplicate or similarly-named functions across files
 
 From these, extract:
 - **Call graph**: what calls what, entry points, leaf functions.

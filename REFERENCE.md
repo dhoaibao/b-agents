@@ -94,6 +94,8 @@ Context7 is used automatically when the topic is a library or framework.
 
 **Limits:** Max 5 URLs scraped per session (7 for COMPARE), fetched in parallel. JS-heavy pages: retry with `waitFor: 5000/8000`, then `firecrawl_map` to find correct URL before skipping. If Brave returns fewer than 3 relevant results, falls back to `firecrawl_search`. For deep multi-page documentation: use `firecrawl_crawl` + poll `firecrawl_check_crawl_status` (async — do not proceed until `status: "completed"`).
 
+**Context isolation (Step 4):** when ≥ 4 URLs need scraping, spawns a single Explore subagent with the URL list and original research question. The subagent runs all `firecrawl_scrape` calls in parallel, applies the post-scrape quality gate, and returns a compact digest (max 500 words per source with URL). Main context receives only the filtered digest — raw scraped content never floods the main context. When < 4 URLs, scrapes directly in main context. If Agent tool unavailable: falls back to direct parallel scraping in main context.
+
 ---
 
 
@@ -308,7 +310,7 @@ cài skills mới
 
 **Output:** Before/after skill list diff — lists added and removed skills, total count. Validates symlinks and frontmatter after sync.
 
-**Distinction from other skills:** b-sync only manages skill installation — it does not invoke any other skill.
+**Distinction from other skills:** b-sync only manages skill installation — it does not invoke other skills.
 
 ---
 

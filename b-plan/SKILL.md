@@ -4,8 +4,8 @@ description: >
   Decompose non-trivial tasks into ordered steps, dependencies, and risks before coding.
   ALWAYS use when the user says "plan", "lên kế hoạch", "thiết kế", "design",
   "how should I approach", "nên làm thế nào", "before I implement", "trước khi code",
-  or describes a task touching 2+ files or multiple moving parts.
-  Also trigger proactively for complex tasks without an explicit plan request.
+  or describes a task touching 2+ files or multiple moving parts,
+  or when the task clearly touches 2+ files without an explicit plan request.
   Distinct from b-analyze: b-plan sequences execution steps; b-analyze evaluates code quality and structure.
 ---
 

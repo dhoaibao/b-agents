@@ -38,14 +38,16 @@ citations and freshness indicators.
 - `firecrawl_crawl` + `firecrawl_check_crawl_status` — from `firecrawl` MCP server *(optional, async deep multi-page crawl for documentation sites)*
 - `resolve-library-id` + `query-docs` — from `context7` MCP server *(optional, for library/framework API topics)*
 - `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for structured conflict resolution)*
+- `Agent` tool (Explore subagent) *(optional, for Step 4 when ≥ 4 URLs need scraping)* — spawn a single Explore subagent with the selected URL list and original research question. The subagent runs all `firecrawl_scrape` calls in parallel, applies the post-scrape quality gate, and returns only relevant excerpts (max 500 words per source, with source URL). Main context receives the compact digest and proceeds directly to Step 5 without raw scraped content flooding the context. When < 4 URLs, use direct parallel scraping as before.
 
 If brave-search or firecrawl is unavailable, stop and tell the user:
 - brave-search missing: "❌ brave-search MCP is not connected. Please check `/mcp`.".
 - firecrawl missing: "❌ firecrawl MCP is not connected. Please check `/mcp`.".
 
 If context7 is unavailable on a library/framework topic, skip Step 2 silently and continue with Step 3.
+If Agent tool is unavailable: use direct parallel `firecrawl_scrape` calls in the main context as before (existing behavior).
 
-Graceful degradation: ❌ Not possible — this skill requires live web data (brave-search + firecrawl). If either MCP is unavailable, stop and tell the user.
+Graceful degradation: ❌ Not possible — this skill requires live web data (brave-search + firecrawl). If either MCP is unavailable, stop and tell the user. Agent tool unavailability: ✅ graceful — falls back to direct parallel scraping.
 
 ## Steps
 
@@ -123,6 +125,22 @@ Apply the strategy for the query type identified in Step 1:
 ---
 
 ### Step 4 — Scrape
+
+**Context isolation threshold**: if ≥ 4 URLs need scraping → spawn a single Explore subagent (see below). If < 4 URLs → use direct parallel `firecrawl_scrape` calls in main context.
+
+---
+
+**When ≥ 4 URLs — spawn a single Explore subagent**
+
+Pass to the subagent:
+1. The list of selected URLs to scrape
+2. The original research question
+
+The subagent runs all `firecrawl_scrape` calls in parallel (`formats: ["markdown"]`, `onlyMainContent: true`), applies the full post-scrape quality gate (discards pages with < 300 words of relevant content, retries JS-heavy pages with `waitFor: 5000/8000`, uses `firecrawl_map` for empty pages), and returns a compact digest: relevant excerpt per source (max 500 words), source URL, and discard notes. Main context receives this digest and proceeds to Step 5 without raw scraped content in context.
+
+---
+
+**When < 4 URLs — scrape directly in main context**
 
 - Call `firecrawl_scrape` on all selected URLs **in parallel** (single message, multiple tool calls)
 - Use `formats: ["markdown"]`, `onlyMainContent: true` to get clean content.
