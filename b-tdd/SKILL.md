@@ -10,8 +10,29 @@ description: >
 
 # b-tdd
 
+$ARGUMENTS
+
 Enforce test-first discipline for every implementation step. No production code is written
 before a failing test exists. Each step follows Red-Green-Refactor strictly.
+
+**`$ARGUMENTS` argument detection** — parse `$ARGUMENTS` before starting, in this priority order:
+
+1. **Explicit step format** `[path.md]:[N]` (e.g. `.claude/b-plans/file.md:3`) — highest priority.
+   - Split on the last `:` to extract plan file path and step number N.
+   - Use `Read` to verify the plan file exists.
+   - Store plan file path + step number N as the authoritative target. Do NOT scan for "next pending" — run exactly step N.
+
+2. **Plan file only** — `$ARGUMENTS` ends in `.md` but contains no `:[N]` suffix.
+   - Use `Read` to verify the file exists. Store as active plan file path.
+   - In single-step mode: find the first pending (`- [ ]`) step by scanning the file. Use that as the target step.
+
+3. **No `.md`** — treat `$ARGUMENTS` as an error message, task description, or scope note. No plan file involved.
+
+4. **Absent** — check session context for an `execute plan from .claude/b-plans/[file].md` invocation. If found, use that file. If not found, ask once: "Is there a plan file for this session?"
+
+**Operation mode** — determined from the detection above:
+- **Plan-file detected → single-step mode**: run exactly one Red-Green-Refactor cycle for the target step (explicit N from format 1, or first pending from format 2), then stop and emit the single-step completion message. Return control to the caller. Do NOT process any other steps.
+- **No plan file → iterate-all mode**: run RGR cycles for all implementation steps sequentially until all are complete (current default behavior).
 
 ## When to use
 
@@ -68,6 +89,10 @@ Write the smallest amount of production code that makes the failing test pass:
 - Do not optimize yet — correctness first.
 - Run the test suite again and confirm the target test now passes.
 - Confirm no previously passing tests regressed.
+  - **If a regression is detected in a previously passing test**:
+    1. Read the failing test and identify whether the current change caused it or it was a pre-existing latent bug.
+    2. If caused by the current change → fix production code and re-run tests before proceeding.
+    3. If pre-existing latent bug exposed by the change → document inline: `// b-tdd note: pre-existing regression in [test] — not introduced by this step`, then ask the user: "Fix this regression now before continuing, or note and proceed?"
 
 If the test still fails: read the error message carefully. Fix production code only — do not weaken the test to make it pass.
 
@@ -84,18 +109,24 @@ With the test green, clean up:
 
 **Rule**: refactor ends when the code is as clean as it needs to be, not when it is perfect. Move to the next step.
 
-**Plan file update**: after refactor is confirmed green, check off the current step in the plan file. Use the `Edit` tool to change `- [ ] N.` → `- [x] N.` in `.claude/b-plans/[task-slug].md`. If the plan file path is not known, check the current session context (the session was opened with `execute plan from .claude/b-plans/[file].md`). If still unknown, ask the user once.
+**Index update**: after refactor is confirmed green, if jcodemunch is available, call `index_file` on each file modified during this RGR cycle to keep the index fresh for subsequent b-analyze or b-debug calls.
+
+**Plan file update**: after refactor is confirmed green, check off the current step in the plan file. Use the `Edit` tool to change `- [ ] N.` → `- [x] N.` in the active plan file. Use the plan file path detected from `$ARGUMENTS` or session context (see intro). If still unknown, ask the user once.
 
 ---
 
-### Step 5 — Repeat per plan step
+### Step 5 — Continue or stop
 
-For each remaining implementation step in the plan:
+**If plan file detected (single-step mode)**:
+- After the RGR cycle for the current step completes and the step is checked off, stop immediately.
+- Emit the single-step completion message (see Output format).
+- Do NOT read or process the next pending step — return control to the caller.
 
-- Return to Step 2 (Red) for the next behavior.
-- Each b-plan step = one Red-Green-Refactor cycle minimum.
-- Some plan steps may require multiple RGR cycles for edge cases — that is expected.
-- Check off the plan file step after each RGR cycle completes (see Step 4)
+**If no plan file (iterate-all mode)**:
+- Return to Step 2 (Red) for the next implementation step.
+- Each step = one Red-Green-Refactor cycle minimum. Some steps may require multiple RGR cycles for edge cases.
+- Check off the plan file step after each RGR cycle completes (see Step 4).
+- **Loop exit condition**: stop when all plan steps have `[x]` checkboxes, or the user explicitly signals completion (e.g., "done", "all steps complete"). Do not continue looping if no pending steps remain.
 
 ---
 
@@ -123,7 +154,14 @@ At each checkpoint, output:
   → Next step: [next plan step]
 ```
 
-At completion:
+Single-step completion (plan-file mode):
+```
+✅ Step [N] complete — returning control to caller
+Tests: [N passed, 0 failed]
+☑ Plan step [N] checked off in .claude/b-plans/[file].md
+```
+
+All-steps completion (iterate-all mode):
 ```
 ✅ All RGR cycles complete
 Tests: [N passed, 0 failed]

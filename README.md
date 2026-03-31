@@ -5,7 +5,7 @@ A personal skill suite for Claude Code, organized into two groups:
 - **Development skills** — a tightly integrated pipeline for software development work, leveraging all 5 MCPs
 - **Personal / daily skills** — standalone utilities for everyday personal use
 
-The development skills form a linear pipeline: **b-plan → b-tdd → b-gate → b-review → b-commit**, with b-analyze, b-debug, b-docs, and b-research as supporting tools.
+The development skills form a linear pipeline: **b-plan → b-tdd → b-gate → b-review → b-commit**, with b-analyze, b-debug, b-docs, and b-research as supporting tools. The `b-execute-plan` skill orchestrates this pipeline with explicit checkpoints and state tracking.
 
 Formatting note: bullet style is standardized across all `SKILL.md` files for consistent readability and maintenance.
 
@@ -32,6 +32,7 @@ All 5 MCPs must be connected. Verify with `/mcp` in Claude Code.
 | Skill | MCP(s) | Use when |
 |---|---|---|
 | [`b-plan`](#b-plan) | sequential-thinking, jcodemunch* | Before non-trivial coding; includes conditional feasibility gate and plan-file handoff |
+| [`b-execute-plan`](#b-execute-plan) | — (Bash + Skill only) | Orchestrating the full pipeline with guided checkpoints and state tracking |
 | [`b-tdd`](#b-tdd) | — (Bash only) | During implementation — enforce Iron Law and Red-Green-Refactor per step |
 | [`b-gate`](#b-gate) | — (Bash only) | After implementation — lint → typecheck → tests → security → clean-code |
 | [`b-review`](#b-review) | sequential-thinking, jcodemunch* | After b-gate — logic, requirements, edge cases, test adequacy |

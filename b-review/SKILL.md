@@ -53,11 +53,9 @@ Graceful degradation: ✅ Possible — core review works with Bash + Read. seque
 Run:
 ```bash
 git diff HEAD
-# or, if changes are staged:
-git diff --cached
-# or, for a specific branch comparison:
-git diff main...HEAD
 ```
+
+If the output is empty: try `git diff --staged` (staged but not committed). If still empty: try `git diff HEAD~1 HEAD` (last commit). If still empty: ask the user — "No uncommitted, staged, or recent changes found. Which changes should I review? (Provide a commit hash, branch name, or describe the change.)" Do not proceed with an empty diff.
 
 Extract:
 - **Files changed**: list of modified, added, deleted files.
@@ -73,8 +71,17 @@ If the diff is large (>500 lines changed), ask the user which area to focus on f
 Determine what the code was *supposed* to do:
 
 1. **Check for plan file** — look for `.claude/b-plans/[task-slug].md`. If found, read the `## Steps` section and the original scope statement. This is the primary requirements source.
-2. **Check $ARGUMENTS** — if provided, use it as the requirements description.
-3. **Ask the user** — if neither is available, ask: "What was this change supposed to accomplish? What does 'done' look like?" One question only.
+2. **Check $ARGUMENTS** — if provided:
+   - If `$ARGUMENTS` ends in `.md` → use `Read` to verify the file exists. If it exists, treat it as the primary requirements source (same as a plan file found in `.claude/b-plans/`).
+   - If `$ARGUMENTS` does not end in `.md` → treat it as a text description of requirements.
+3. **Ask the user** — if neither is available, ask: "What was this change supposed to accomplish? What does 'done' look like?" Initial ask, then one re-prompt if vague — two questions maximum.
+
+**Vague response enforcement**: if the user's answer is fewer than 2 sentences or lacks specific behavior or acceptance criteria, ask once more with a concrete example prompt:
+> "Please be more specific. For example: 'The retry logic should attempt 3 times with exponential backoff, and log each failure. It should not retry on 4xx errors.' What specific behavior should this code exhibit, and how would you verify it works?"
+
+If the response is still vague after the second prompt, pause with:
+> "Cannot review without a clear requirements baseline. Please answer: What specific behavior should the changed code exhibit, and how would you verify it works?"
+Do not proceed to Step 3 until a concrete answer is provided.
 
 The review is only as good as the requirements baseline. Do not review without it.
 

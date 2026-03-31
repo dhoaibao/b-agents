@@ -38,8 +38,9 @@ If `$ARGUMENTS` is provided, parse it as `[library] [topic]` (e.g. `sendgrid sen
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, fallback when context7 has no index)*
 
 If context7 is unavailable:
-- Tell the user: "❌ context7 MCP is not connected. Please check `/mcp`.".
-- Do NOT fall back to training data for API details — offer to use `b-research` to scrape official docs instead.
+- Notify the user: "❌ context7 MCP not connected — escalating to b-research for `[library] [topic]`. You can cancel with Ctrl+C."
+- Do NOT fall back to training data for API details.
+- Invoke the `b-research` skill with the original library and topic as the query.
 
 Graceful degradation: ⚠️ Partial — fallback chain: context7 → firecrawl (direct scrape of official docs) → b-research (full research pipeline).
 
@@ -68,7 +69,7 @@ Call `resolve-library-id` with the library name.
 - If no result found: try the firecrawl direct-scrape fallback (see below) before escalating to b-research.
 
 **Firecrawl direct-scrape fallback** *(when context7 has no index for a library)*:
-If the library has a well-known official docs URL (e.g. docs.sendgrid.com, docs.bullmq.io, docs.stripe.com) → call `firecrawl_scrape` on that URL with `formats: ["markdown"], onlyMainContent: true`. If the scrape returns ≥300 words of relevant content → use it directly as the doc source, skip b-research. If the scrape fails or returns <300 words → then escalate to b-research: tell the user "⚠️ context7 has no index for `[library]` and direct scrape was insufficient. Falling back to b-research to scrape official docs."
+If the library has a well-known official docs URL (e.g. docs.sendgrid.com, docs.bullmq.io, docs.stripe.com) → call `firecrawl_scrape` on that URL with `formats: ["markdown"], onlyMainContent: true`. If the scrape returns ≥300 words of relevant content → use it directly as the doc source, skip b-research. If the scrape fails or returns <300 words → escalate to b-research: notify the user "⚠️ context7 has no index for `[library]` and direct scrape was insufficient — escalating to b-research for deeper lookup. You can cancel with Ctrl+C." then invoke the `b-research` skill with the original library and topic as the query.
 
 ---
 

@@ -66,7 +66,11 @@ If the user corrects scope, update and re-confirm once. If still unclear, ask on
 - No blockers, effort S–L → proceed to Step 1.
 - No blockers, effort XL–XXL AND any of the following apply → **stop and run a dedicated research session before planning**: unfamiliar architectural pattern (event sourcing, CQRS, real-time sync), unverified library capability, large blast radius, third-party service constraints unknown. Use `b-docs` or `b-research` to resolve these, then return to b-plan.
 - No blockers, effort XL–XXL, constraints known → surface scope to user, confirm, then proceed to Step 1.
-- Blocker found → state it clearly with a workaround (if any) or recommend descoping; do not plan around an unresolved blocker.
+- Blocker found → follow this escalation sequence:
+  1. **State the blocker clearly**: describe exactly what is blocked and why.
+  2. **If a workaround exists** → document it explicitly and ask the user to confirm before proceeding to Step 1. Label any plan step that depends on the workaround with a `⚠️ depends on workaround for [blocker]` note.
+  3. **If no workaround exists** → recommend descoping (remove or defer the blocked scope) or resolving the blocker first. **Do NOT proceed to Step 1** until the blocker is resolved or descoped.
+  4. **Never plan around an unresolved blocker.** Planning around an unknown is a risk you can surface; planning around a known blocker produces a plan that will fail at execution time.
 
 Append a `## Feasibility` section to the plan file (optional — only if Step 0 was run):
 ```markdown
@@ -213,20 +217,20 @@ Language: always English — write plan files in English regardless of the user'
 
 ## Execution (in a new session)
 
-Plan files are always in English. When a new session opens with `execute plan from .claude/b-plans/[file].md`:
+Plan files are always in English. When a new session opens with `execute plan from .claude/b-plans/[file].md`, use the **b-execute-plan** skill — it orchestrates the full pipeline automatically with state tracking, rollback support, and context-overflow protection.
 
-1. Read the plan file
-2. If the plan modifies existing code and no `## Context` section exists → run `b-analyze` on the relevant modules first, append findings as `## Context` to the plan file
-3. Execute steps in order:
-   - Production-code steps: apply **b-tdd** (failing test → implement → refactor). b-tdd checks off the step after each RGR cycle.
-   - Non-production-code steps (config/migration/docs/deletion): check off `- [ ]` → `- [x]` directly when done.
-   - After each modified file: call `index_file` to keep jcodemunch index fresh.
-4. Re-evaluate remaining steps if something unexpected happens mid-execution
-5. **If a step fails**: change `- [ ]` to `- [❌] Step N — [brief reason]`, check downstream dependencies, and pause/inform the user if blockers exist. Never silently skip failed steps.
-6. After all steps complete → run **b-gate** on the changed files. Fix any hard failures (lint, typecheck, test, high-severity security) before proceeding. Note soft warnings as follow-ups.
-7. After b-gate passes → run **b-review** to verify logic correctness and requirements coverage. Fix any blockers b-review surfaces.
-8. After b-review gives READY FOR PR → run **b-commit** to generate commit message and PR description.
-9. Update the plan file with final status when done.
+Pipeline overview (b-execute-plan handles all of this):
+
+0. **Pre-execution** *(conditional)*: if plan modifies existing code and no `## Context` section exists → extract file paths from plan Steps, run `b-analyze` scoped to only those paths, append as `## Context`. Skip if greenfield or context already present.
+1. **Per implementation step** → invoke `/b-tdd [plan-file]:[N]` (single-step mode: runs exactly step N, checks it off, returns control). b-tdd enforces Iron Law + RGR per step.
+2. **After all implementation steps** → invoke `/b-gate` (no args — runs on full working tree).
+3. **After b-gate passes** → invoke `/b-review [plan-file]` (passes plan as requirements baseline).
+4. **After READY FOR PR** → invoke `/b-commit`.
+5. **Non-production steps** (config, docs, delete, migrate, rename): perform manually, signal `done` — no skill invoked.
+6. **On step failure**: b-execute-plan writes `[❌] N — reason`, checks `git diff --stat` for partial changes, offers `git checkout -- .` rollback, blocks dependent steps from running.
+7. **On NEEDS FIXES from b-review**: b-execute-plan verifies real code changes via `git diff HEAD --stat` before resetting b-gate checkpoint — never resets on verbal signal alone.
+
+For plans with > 6 pending steps: b-execute-plan warns at load time and reminds after 5 completed steps to consider a fresh session. Session step count is derived from the file (context-safe).
 
 ---
 

@@ -46,6 +46,61 @@ quality check. Index refresh: calls `index_file` on each modified file after eac
 
 ---
 
+### b-execute-plan
+
+Orchestrates the full development pipeline (b-analyze → b-tdd → b-gate → b-review → b-commit) by
+reading plan files, tracking step completion, and prompting for each stage. Reads
+`.claude/b-plans/*.md` files, parses checkbox state, displays progress, and guides
+execution with explicit checkpoints. After each step completes, updates the plan file
+and moves to the next stage.
+
+**Good triggers:**
+```
+execute plan
+run plan: implement-b-execute-plan.md
+/b-execute-plan
+orchestrate the pipeline
+```
+
+**Workflow:**
+0. **Pre-execution (conditional)**: if the plan modifies existing code and no `## Context` section exists → extract explicit file paths from plan Steps, run b-analyze scoped to only those paths, append as `## Context`. Ask user if scope is ambiguous — never run unconstrained full-repo analysis.
+1. Locate plan file: from argument if provided; if none, Glob `.claude/b-plans/*.md` — if multiple exist, list with timestamps and ask (never auto-select). **Session resume**: completed (`[x]`) steps are skipped automatically.
+   - **Context window warning**: if pending steps > 6, warn once and suggest splitting at step 5.
+2. Parse step checkboxes (`- [ ] Step N` / `- [x]` / `- [❌] Step N — reason`).
+3. Display state (✓ / ❌ / ○). Detect skill from keywords — **non-production keywords (delete/remove/config/migrate/document/rename) are checked first** to prevent "create migration" routing to b-tdd. Invocation format is skill-specific: b-tdd → `[plan-file]:[N]`; b-review → `[plan-file]`; b-gate/b-commit → no plan args. Check `## Dependencies` for blocking failures and parallel declarations (offer parallel for b-tdd steps only).
+4. Wait for user signal. On failure: capture reason, write `- [❌] N — reason`, run `git diff HEAD --stat` for partial changes, offer `git checkout -- .` rollback before retrying.
+5. Update plan checkbox (`[ ]` → `[x]`). Re-read file to recompute session step counter (`current [x] − baseline [x] at session start` — file-based, survives context compression).
+6. Loop until done. **NEEDS FIXES re-entry**: user signals fix → run `git diff HEAD --stat` to confirm real changes → ask "cosmetic or new behavior?" → cosmetic: reset b-gate and re-run; new behavior: route through b-tdd first, then b-gate, then b-review. Iron Law is never bypassed.
+
+**Output:**
+```
+📋 Plan: Implement b-execute-plan
+Status: 3 of 6 steps complete ✓
+
+✓ Step 1 — Create b-execute-plan/SKILL.md
+✓ Step 2 — Design skill workflow
+✓ Step 3 — Define Tools required
+○ Step 4 — Write Output format
+○ Step 5 — Update README.md
+○ Step 6 — Update REFERENCE.md
+
+→ Next: Step 4 — Write Output format and Rules sections
+Detected skill: /b-tdd (keyword match: 'write'). Confirm? [y/n]
+Run `/b-tdd .claude/b-plans/implement-b-execute-plan.md:4` to proceed, or type a different skill to override.
+```
+
+**State tracking:** Parses plan file dynamically. If user manually edits the plan,
+b-execute-plan re-reads it on the next loop. Checkpoint updates are explicit and
+require user signal (`done`, `next`, or skill invocation).
+
+**Scope:** Orchestrates Step 0 (b-analyze, conditional) + production pipeline (b-tdd → b-gate → b-review → b-commit). b-plan is out of scope — use b-plan to create plans, b-execute-plan to run them.
+
+**Distinction from manual pipeline:** b-execute-plan provides guided checkpoints,
+state tracking, and human-in-the-loop orchestration. Users can still run the pipeline
+skills manually; b-execute-plan is an optional convenience wrapper.
+
+---
+
 ### b-docs
 
 Fetches live, version-accurate documentation from Context7 before implementing anything
@@ -66,7 +121,7 @@ hướng dẫn sử dụng Zod
 and deprecation notices for the current version. Routes to implementation or lookup-only
 depending on how it was called.
 
-**Fallback chain:** context7 → firecrawl direct scrape (if library has a known official docs URL) → b-research (full research pipeline). The firecrawl fallback tries a single `firecrawl_scrape` on the official docs URL before escalating to the heavier b-research pipeline.
+**Fallback chain:** context7 → firecrawl direct scrape (if library has a known official docs URL) → b-research (full research pipeline). The firecrawl fallback tries a single `firecrawl_scrape` on the official docs URL. If the scrape fails or returns <300 words, b-docs notifies the user and actively invokes b-research with the original library and topic query — it does not ask the user to run b-research manually.
 
 ---
 
@@ -114,11 +169,19 @@ viết test trước
 red-green-refactor
 ```
 
-**Output:** Per-step RGR checkpoint log (🔴 Red → 🟢 Green → ✅ Refactor). Final
-summary with test pass count. Handoff to b-gate when all steps are complete.
+**Argument format:**
+- `b-tdd .claude/b-plans/file.md:3` — single-step mode, runs exactly step 3 (used by b-execute-plan)
+- `b-tdd .claude/b-plans/file.md` — single-step mode, auto-detects first pending step
+- `b-tdd` (no args) — iterate-all mode, runs all steps sequentially
+
+**Output:** Per-step RGR checkpoint log (🔴 Red → 🟢 Green → ✅ Refactor). Single-step completion message when called with plan file; full summary + b-gate handoff when iterating all.
 
 **Iron Law:** Never writes production code before a failing test. Documents any
 exception with `// b-tdd exception: [reason]`.
+
+**Regression handling:** If a previously passing test breaks during Green, b-tdd determines whether it was caused by the current change (fix production code) or was a pre-existing latent bug (document inline and ask user to decide). Never silently ignores regressions.
+
+**Index refresh:** After each Refactor step, calls `index_file` on all modified files if jcodemunch is available.
 
 **Distinction from b-gate:** b-tdd governs discipline during coding. b-gate validates
 the finished result.
@@ -213,7 +276,7 @@ PR description
 ```
 
 **Output:** Commit message block + PR description block, ready to copy-paste.
-Flags mixed commits with a ⚠️ note if detected.
+On mixed-concern diffs: stops and outputs 2 separate commit message suggestions (one per concern group) with instructions to split via `git add -p`. Does not produce a single unified message for a mixed diff.
 
 **Distinction from b-gate:** b-gate runs automated checks. b-commit produces text only.
 
@@ -393,9 +456,14 @@ b-plan ──── Step 0 (conditional) ────────► jcodemunch 
        ──── execution: file modified ────► jcodemunch (index_file to keep index fresh)
        ──── execution: all steps done ──► b-gate     (final quality check)
 
-b-tdd ───── detect test stack ────────────► Bash (read package.json / pyproject.toml / Makefile)
-      ───── run tests ──────────────────────► Bash (npm test / pytest / go test ./...)
-      ───── all steps complete ─────────────► b-gate (handoff for final validation)
+b-tdd ───── called with [file.md]:[N] ────► single-step mode: run exactly step N, return control
+      ───── called with [file.md] only ────► single-step mode: auto-detect first pending step
+      ───── called with no args ───────────► iterate-all mode: run all steps sequentially
+      [NOTE: b-gate and b-commit do NOT accept [file.md]:[N] — pass no plan args to them]
+      ───── detect test stack ─────────────► Bash (read package.json / pyproject.toml / Makefile)
+      ───── run tests ─────────────────────► Bash (npm test / pytest / go test ./...)
+      ───── refactor complete ─────────────► jcodemunch (index_file on modified files, optional)
+      ───── all steps complete ────────────► b-gate (handoff for final validation)
 
 b-gate ──── GATE PASSED ──────────────────► b-review (human-judgment review before PR)
 
@@ -409,7 +477,8 @@ b-commit ── read diff ──────────────────
          ── output text only ──────────────► commit message + PR description (no git execution)
 
 b-docs ──── context7 has no index ──────► firecrawl   (direct scrape of official docs URL, single page)
-       ──── firecrawl insufficient ────► b-research  (full multi-source research)
+       ──── firecrawl insufficient ─────► b-research  (full multi-source research, active invoke)
+       ──── context7 unavailable ───────► b-research  (active invoke — notify user then escalate directly)
 
 b-debug ─── trace execution path ────────► jcodemunch (resolve_repo → suggest_queries → get_context_bundle → find_references → get_blast_radius → get_symbol_source → get_related_symbols)
         ─── regression detection ────────► jcodemunch (get_symbol_diff)

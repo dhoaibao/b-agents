@@ -181,6 +181,9 @@ On failure:
 
 Fix required before proceeding:
   → [specific action to take]
+
+Re-run this check only: [specific command, e.g. `npx eslint .` / `npx tsc --noEmit` / `npm test`]
+If it passes, re-run full gate from Step 1 to confirm no regressions introduced by the fix.
 ```
 
 On pass → next step: run **b-review** to verify logic correctness and requirements coverage before opening a PR.

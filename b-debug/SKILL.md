@@ -78,6 +78,8 @@ or "recent changes" is often the fastest path to root cause.
 
 ### Step 2 — Map the code structure
 
+> **Session optimization**: If b-analyze has already run for the same codebase in this session, skip step 2.0 (index/resolve) and reuse the existing repo identifier — the jcodemunch index is still current. Proceed directly to `get_context_bundle` on the relevant entry point.
+
 Use `jcodemunch` to trace the execution path in this order:
 
 0. **Index or resolve** — first call `resolve_repo(path="/absolute/project/root")`. If it returns a repo identifier, use it directly (index already exists). If it returns no match, call `index_folder` with the absolute path to the project root and `use_ai_summaries: false`. Note the `repo` identifier from the response (format: `local/[name]-[hash]`) — pass this as `repo` to every subsequent jcodemunch call. If `file_count` is 0, jcodemunch can't parse this codebase → use Glob/Grep to map files manually instead.

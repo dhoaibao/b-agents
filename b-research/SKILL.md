@@ -69,6 +69,8 @@ Classify the user's query into **one of four types** before doing anything else.
 
 ### Step 2 — Context7 lookup *(HOWTO/API type only)*
 
+> **Session optimization**: If b-docs has already run for this library in the current session, skip this step and use those findings as the versioned API reference for Step 5 synthesis — do not call context7 again.
+
 Use `resolve-library-id` to find the correct Context7 library ID, then `query-docs` to fetch version-accurate documentation.
 
 - Set `topic` to the specific feature or API area relevant to the user's question.

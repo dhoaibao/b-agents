@@ -52,7 +52,11 @@ Understand:
 - **Why this change was made** — from plan file (`.claude/b-plans/`) or conversation context.
 - **Atomicity** — is this one logical unit, or mixed concerns?
 
-If the diff mixes unrelated changes (e.g. feature + unrelated refactor + formatting fix): note this in the output and suggest the user split into separate commits before applying.
+If the diff mixes unrelated changes (e.g. feature + unrelated refactor + formatting fix): **stop and do not produce a single unified commit message**. Instead:
+1. List the detected concern groups (e.g. "Group 1: retry logic in queue.ts; Group 2: formatting fixes in utils.ts").
+2. Output 2 separate commit message suggestions, one per concern group.
+3. Explain: "If this is intentional, use one of the suggestions above. To split: `git add -p` to stage each concern separately, then commit twice."
+Do not proceed to Step 2 for a unified message when mixed concerns are detected.
 
 ---
 
@@ -134,8 +138,23 @@ Body explains *why*, not *what* — the diff already shows what.
 \`\`\`
 
 ---
-⚠️ Mixed concerns detected: [description] — consider splitting before applying.
-(omit this line if diff is atomic)
+⚠️ Mixed concerns detected — producing 2 separate suggestions:
+
+**Concern Group 1**: [description of first group]
+**Commit message 1:**
+\`\`\`
+<type>(<scope>): <subject>
+\`\`\`
+
+**Concern Group 2**: [description of second group]
+**Commit message 2:**
+\`\`\`
+<type>(<scope>): <subject>
+\`\`\`
+
+If this is intentional, use one of the suggestions above.
+To split: `git add -p` to stage each concern separately, then commit twice.
+(omit this section if diff is atomic)
 ```
 
 ---
@@ -146,4 +165,4 @@ Body explains *why*, not *what* — the diff already shows what.
 - Body is for *why*, not *what*
 - If diff is unreadable (too large or binary), ask the user to describe the change instead.
 - If plan file exists, use it as the primary source for *why* — do not invent reasons.
-- Flag mixed commits but do not refuse to produce the message — user decides whether to split.
+- On mixed-concern diffs: stop, list concern groups, output 2 separate commit message suggestions, and explain how to split with `git add -p`. Do not produce a single unified message for a mixed diff.
