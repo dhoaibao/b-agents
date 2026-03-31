@@ -131,7 +131,7 @@ depending on how it was called.
 
 Deep research workflow: classify query type → search with type-specific tool → scrape
 full pages with Firecrawl → synthesize into a structured report with citations. Never
-relies on search snippets or training data alone.
+relies on search snippets or training data alone. **Token-optimized**: picks 3 highest-quality URLs, strict post-scrape gate, aggressive source filtering.
 
 **Query type routing:**
 - `NEWS` queries → `brave_news_search` with `freshness: "pd"/"pw"` (not `brave_web_search`)
@@ -149,9 +149,9 @@ deep dive into Redis Streams
 **Output:** Summary, key findings, optional comparison table, and cited sources.
 Context7 is used automatically when the topic is a library or framework.
 
-**Limits:** Max 5 URLs scraped per session (7 for COMPARE), fetched in parallel. JS-heavy pages: retry with `waitFor: 5000/8000`, then `firecrawl_map` to find correct URL before skipping. If Brave returns fewer than 3 relevant results, falls back to `firecrawl_search`. For deep multi-page documentation: use `firecrawl_crawl` + poll `firecrawl_check_crawl_status` (async — do not proceed until `status: "completed"`).
+**Limits:** Max 3 URLs scraped per session (5 for COMPARE queries), selected via strict source hierarchy (Tier 1 official > community > neutral). Pre-scrape filtering eliminates homepages, login pages, aggregators. Post-scrape gate discards <300 words OR topic not mentioned; stops if <2 usable sources remain (no blind rescaping). If Brave returns fewer than 3 relevant results, falls back to `firecrawl_search`. For deep multi-page documentation: use `firecrawl_crawl` + poll `firecrawl_check_crawl_status` (async — do not proceed until `status: "completed"`).
 
-**Context isolation (Step 4):** when ≥ 4 URLs need scraping, spawns a single Explore subagent with the URL list and original research question. The subagent runs all `firecrawl_scrape` calls in parallel, applies the post-scrape quality gate, and returns a compact digest (max 500 words per source with URL). Main context receives only the filtered digest — raw scraped content never floods the main context. When < 4 URLs, scrapes directly in main context. If Agent tool unavailable: falls back to direct parallel scraping in main context.
+**Context isolation (Step 4):** when ≥ 6 URLs need scraping, spawns a single Explore subagent with the URL list and original research question. The subagent runs all `firecrawl_scrape` calls in parallel, applies the post-scrape quality gate, and returns a compact digest (max 500 words per source with URL). Main context receives only the filtered digest — raw scraped content never floods the main context. When < 6 URLs, scrapes directly in main context. If Agent tool unavailable: falls back to direct parallel scraping in main context.
 
 ---
 

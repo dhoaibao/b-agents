@@ -111,7 +111,7 @@ Apply the strategy for the query type identified in Step 1:
 **Universal search rules (all types):**
 - Use English queries unless the topic is Vietnamese-specific.
 - Fetch 5–8 results from Brave.
-- Pick 3–5 most relevant URLs, applying the source quality hierarchy below.
+- **Pick 3 highest-quality URLs** using the source quality hierarchy below (quality over quantity: 3 Tier-1 sources > 5 mixed-tier sources).
 - **Fallback**: If `brave_web_search` returns fewer than 3 relevant results, retry with `firecrawl_search` using the same query — it returns full page content directly, skip Step 4 for those results.
 
 **Source quality hierarchy (prefer top tiers):**
@@ -128,7 +128,7 @@ Apply the strategy for the query type identified in Step 1:
 
 ### Step 4 — Scrape
 
-**Context isolation threshold**: if ≥ 4 URLs need scraping → spawn a single Explore subagent (see below). If < 4 URLs → use direct parallel `firecrawl_scrape` calls in main context.
+**Context isolation threshold**: if ≥ 6 URLs need scraping → spawn a single Explore subagent (see below). If < 6 URLs → use direct parallel `firecrawl_scrape` calls in main context. (With smart source selection keeping typical queries to 3 URLs, subagent spawn is rare — reduces context overhead.)
 
 ---
 
@@ -142,13 +142,24 @@ The subagent runs all `firecrawl_scrape` calls in parallel (`formats: ["markdown
 
 ---
 
+**Pre-scrape filtering** (before Step 4, eliminate low-value URLs):
+- Remove from scrape queue:
+  - Homepage or landing page (no specific content)
+  - Pages requiring login/authentication
+  - Tutorial/guide when user asked for API specs or comparisons (skip tutorials for spec queries)
+  - Third-party aggregators or version trackers (use official source instead)
+  - Paywalled pages with paywall message visible
+- **Goal**: scrape only high-signal sources → saves 1–2K tokens by avoiding trash content
+
+---
+
 **When < 4 URLs — scrape directly in main context**
 
 - Call `firecrawl_scrape` on all selected URLs **in parallel** (single message, multiple tool calls)
-- Use `formats: ["markdown"]`, `onlyMainContent: true` to get clean content.
-- **Fallback for JS-heavy pages** (SPAs, Mintlify/GitBook docs, React-rendered pages): if content is empty or <200 words, retry with `waitFor: 5000`. If still <200 words, retry once more with `waitFor: 8000`. If still empty → call `firecrawl_map` on the domain root to discover the correct content URL, then retry scrape on the mapped URL. If still empty, skip and note in report as "could not scrape — JS-rendered page".
+- Use `formats: ["markdown"]`, `onlyMainContent: true` to get clean content without boilerplate.
+- **Fallback for JS-heavy pages** (SPAs, Mintlify/GitBook docs, React-rendered pages): if content is empty or <200 words after one retry with `waitFor: 5000` → skip and note in report as "could not scrape — JS-rendered or access denied". (Removed retry with `waitFor: 8000` and `firecrawl_map` fallback to save tokens — not worth the cost for marginal improvement.)
 - If a page returns rate-limit or 403 → skip it and note in report.
-- Default max: **5 URLs** scraped per session. Exception: **7 URLs** for COMPARE queries.
+- Default max: **3 URLs** scraped per session (quality > quantity). Exception: **5 URLs** for COMPARE queries (ensure balanced coverage of both options).
 - If rate-limiting occurs on parallel calls, retry failed URLs sequentially.
 
 **Deep multi-page crawl** *(for documentation sites — use when you need comprehensive coverage of a multi-page doc, not just a single article)*:
@@ -156,10 +167,12 @@ The subagent runs all `firecrawl_scrape` calls in parallel (`formats: ["markdown
 2. Poll `firecrawl_check_crawl_status` every few seconds until `status: "completed"` — do NOT proceed until crawl is done
 3. Use the returned pages as your source set; apply the post-scrape quality gate below
 
-**Post-scrape quality gate** (do this before synthesizing):
+**Post-scrape quality gate** (strict filtering — do this before synthesizing):
 - For each scraped page, check: does the content actually address the user's question?
-- If a page has < 300 words of relevant content OR the topic is not mentioned → discard it and note "low-quality source discarded".
-- If fewer than 2 usable sources remain after discarding → run a second Brave search with a different query angle and scrape 1–2 more URLs.
+- **Discard immediately** if: < 300 words of relevant content AND topic is not mentioned → note "low-quality source discarded"
+- **Discard if** > 50% boilerplate (nav, footer, ads, sidebars) and < 200 unique content words → note "mostly boilerplate"
+- **If fewer than 2 usable sources remain after discarding** → STOP. Tell user: "Couldn't find enough reliable sources on this topic. Try being more specific or rephrasing the question." Do NOT blindly scrape more URLs.
+- **Exception**: For COMPARE queries where sources explicitly disagree, retain >1 source per option even if marginal, to preserve conflicting perspectives.
 
 ---
 

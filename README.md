@@ -38,7 +38,7 @@ All 5 MCPs must be connected. Verify with `/mcp` in Claude Code.
 | [`b-review`](#b-review) | sequential-thinking, jcodemunch* | After b-gate — logic, requirements, edge cases, test adequacy; small-change fast path (≤50 lines, ≤2 files) |
 | [`b-commit`](#b-commit) | — (Bash only) | After b-review — generate commit message and PR description text (no git execution) |
 | [`b-docs`](#b-docs) | context7, firecrawl* | Before using any library or SDK |
-| [`b-research`](#b-research) | brave-search (web+news), firecrawl, context7*, sequential-thinking*, Agent* | Deep research, tool comparison, synthesis |
+| [`b-research`](#b-research) | brave-search (web+news), firecrawl, context7*, sequential-thinking*, Agent* | Deep research, tool comparison, synthesis — optimized for token efficiency (3 URLs smart selection, strict post-scrape gate) |
 | [`b-analyze`](#b-analyze) | jcodemunch (12 tools), sequential-thinking*, brave-search* | Understand or review code before changing it; `quick` mode (structure map only) or full deep analysis |
 | [`b-debug`](#b-debug) | jcodemunch (9 tools), sequential-thinking, brave-search*, firecrawl* | Trace bugs that have no obvious cause |
 | [`b-observe`](#b-observe) | jcodemunch (6 tools), sequential-thinking* | Static observability audit — missing logs, swallowed errors, metrics gaps, tracing coverage |
