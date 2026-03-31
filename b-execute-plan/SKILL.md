@@ -61,13 +61,14 @@ Use `Read` to load the selected plan file content.
 **Context window warning**: after loading the plan, count total pending (`[ ]`) steps. If pending steps > 6, warn once:
 > "⚠️ This plan has N pending steps. To prevent context overflow mid-execution, consider running steps 1–5 in this session, then opening a fresh session for the remainder. Resume anytime with: `execute plan from .claude/b-plans/[file].md`"
 
-**Session step counter (file-based, context-safe)**: at Step 1 load time, count the existing `[x]` checkboxes in the plan file — store this as `baseline_completed`. After each Step 5 check-off, re-read the file and count total `[x]` checkboxes again. `session_steps = current_completed − baseline_completed`.
+**Session step counter (file-based, context-safe)**: at Step 1 load time, count the existing `[x]` checkboxes in the plan file — store this as `baseline_completed`. Also check whether the plan file contains a `## Context` section — store this as `has_analysis_context` (true if the string `## Context` appears anywhere in the loaded file content; false otherwise — no extra Read needed, reuse the already-loaded content). After each Step 5 check-off, re-read the file and count total `[x]` checkboxes again. `session_steps = current_completed − baseline_completed`.
 
 **Trigger condition** (purely file-derived, survives context compression):
 ```
-session_steps >= 5 AND (session_steps − 5) % 3 == 0
+threshold = 3 if has_analysis_context else 5
+session_steps >= threshold AND (session_steps − threshold) % 3 == 0
 ```
-This fires at 5, 8, 11, 14... — no in-context flag needed.
+This fires at 3, 6, 9... when a `## Context` section is present (analysis-heavy plan — context fills faster), or at 5, 8, 11... otherwise — no in-context flag needed. Both tiers derive from the file on every loop and survive context compression.
 
 When triggered, **pause execution** and prompt:
 
@@ -176,6 +177,20 @@ Invoke the skill using the format determined in Step 3. Interpret the skill outp
 
 **On success**: auto-advance to Step 5 without waiting for user input.
 **On failure**: pause and invoke failure handling below.
+
+**b-gate failure shortcut** — if the invoked skill was b-gate AND failure is detected, before the standard failure flow:
+1. Extract the failing check name (e.g., "lint", "typecheck", "tests") and the first ~10 lines of error output from the gate output.
+2. Offer the user two options:
+   ```
+   ⚠️ b-gate failed: [failing-check]
+   [first ~10 lines of error output]
+
+   Options:
+     1 — Auto-launch b-debug with this error (faster root cause analysis)
+     2 — Fix manually (I'll investigate myself)
+   ```
+3. If user picks `1`: immediately invoke `/b-debug [failing-check]: [key error lines]` with the extracted error as `$ARGUMENTS`. Wait for b-debug to complete, then re-invoke b-gate to confirm all checks pass. If b-gate passes after the debug cycle, auto-advance to Step 5.
+4. If user picks `2`: fall through to the standard failure handling below.
 
 **Failure handling**: if the skill output signals failure or the user reports failure (e.g., "failed", "it didn't work", "error"), before halting:
 1. Ask the user for a brief reason (one sentence).

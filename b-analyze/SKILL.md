@@ -53,6 +53,7 @@ From `jcodemunch` MCP server:
 - `get_related_symbols` — discover functions closely associated with a symbol (pattern similarity)
 - `search_text` — search for literal strings or regex patterns (magic numbers, hardcoded values)
 - `search_columns` — from jcodemunch MCP server *(optional, for dbt/SQL/data warehouse projects)*
+- `get_session_stats` — from `jcodemunch` MCP server *(optional, for stale index detection — verify index freshness before analysis)*
 
 From `sequential-thinking` MCP server *(optional)*:
 - `sequentialthinking` — structured prioritization of findings to produce an ordered action list.
@@ -86,6 +87,7 @@ Use `jcodemunch` to map the target code in this order:
 
 1. **Index or resolve** — first call `resolve_repo(path="/absolute/project/root")`. If it returns a repo identifier, use it directly (index already exists). If it returns no match, call `index_folder` with the absolute path to the project root (e.g. `/home/user/my-project`) and `use_ai_summaries: false`. Note the `repo` identifier returned in the response (format: `local/[name]-[hash]`) — you must pass this as `repo` to every subsequent jcodemunch call.
    - If `file_count` returns 0 or `symbol_count` is 0, jcodemunch does not support this file type (e.g. Markdown, config-only repos) → switch to the Glob/Grep fallback immediately.
+   - **Stale index check** (only when `resolve_repo` returned an existing index — skip when `index_folder` was just called): call `get_session_stats(repo=[identifier])` and read the `files_indexed` count. Use `Glob("**/*.{ts,tsx,js,jsx,py,go,rs,java,rb,php,kt,swift}")` to count actual source files. If `|files_indexed − actual_count| / actual_count > 0.10` (more than 10% drift), call `index_folder` to re-index before proceeding — the index is stale and analysis will miss recently added or deleted files. If `get_session_stats` is unavailable or returns no file count metric, skip the check and note in output: "⚠️ Could not verify index freshness — analysis may miss recently added/deleted files."
 2. **suggest_queries** (repo: ...) — call immediately after indexing. This auto-surfaces entry points, language distribution, and key architectural symbols. Use the output to focus subsequent queries on the most significant areas rather than scanning everything.
 3. `get_repo_outline` (repo: the identifier from step 1) — overview of all modules, files, and top-level symbols
 4. `get_file_outline` (batch: pass `file_paths=[...]` with the most relevant files from step 2) — inspect each file for functions, classes, and exports; use batch mode to load multiple files in one call instead of calling one at a time

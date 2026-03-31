@@ -14,8 +14,7 @@ to confirm Understanding Lock, blockers, and effort. Uses `sequential-thinking` 
 decomposition and unknown/risk surfacing. For modify-existing-code tasks, scans with
 `jcodemunch` (`suggest_queries` → `get_repo_outline` → `get_file_outline` batch, optional
 `get_file_tree`) so plans reference real paths/symbols and follow existing patterns.
-Includes an explicit **architecture trade-off checkpoint** and a plan-file handoff for
-execution in a fresh session.
+Includes an explicit **architecture trade-off checkpoint**, a **deploy safety checkpoint** (new routes/endpoints/UI → suggest feature flag; DB schema changes → document migration ordering — additive before deploy, destructive after; new external service calls/queues → flag availability verification), and a plan-file handoff for execution in a fresh session. Deploy safety findings are appended to the plan's `## Risks` section.
 
 **Good triggers:**
 ```
@@ -37,6 +36,8 @@ criteria), quick architecture scan for blockers, and effort estimate. Skip if ta
 clearly scoped, user has already decided to proceed, or it is ≤3 steps / single-file.
 
 **Step 0/1 de-duplication:** If Step 0 ran, Step 1 skips the scope/end-state questions (already locked in Understanding Lock) and only verifies: (a) greenfield vs existing code, and (b) any hard constraints not yet captured. Avoids asking the same questions twice.
+
+**Issue/ticket field:** Step 1 asks (optional) for an issue/ticket URL or ID. If provided, writes `**Issue**: [value]` to the plan file header after `**Created**`. Accepts full URLs (`https://linear.app/…`, `https://github.com/…/issues/123`), short ticket IDs (`PROJ-456`, `#123`), or free-text references. b-review reads this field to enrich the requirements baseline.
 
 **Rule:** Never execute in the same session as planning — always save to a plan file and open a new session with b-execute-plan.
 
@@ -69,9 +70,10 @@ orchestrate the pipeline
 0. **Pre-execution (conditional)**: if the plan modifies existing code and no `## Context` section exists → extract explicit file paths from plan Steps, run b-analyze scoped to only those paths, append as `## Context`. Ask user if scope is ambiguous — never run unconstrained full-repo analysis.
 1. Locate plan file: from argument if provided; if none, Glob `.claude/b-plans/*.md` — if multiple exist, list with timestamps and ask (never auto-select). **Session resume**: completed (`[x]`) steps are skipped automatically.
    - **Context window warning**: if pending steps > 6, warn once and suggest splitting at step 5.
+   - **Two-tier context threshold**: session step counter threshold = 3 if plan file contains `## Context` section (analysis-heavy — context fills faster), 5 otherwise. Derived from file content at load time — survives context compression. Fires at 3/6/9… or 5/8/11… respectively.
 2. Parse step checkboxes (`- [ ] Step N` / `- [x]` / `- [❌] Step N — reason`).
 3. Display state (✓ / ❌ / ○). Detect skill from keywords — **non-production keywords (delete/remove/config/migrate/document/rename) are checked first (Priority 1)** to prevent "create migration" or "create config" routing to b-tdd despite containing "create". Only "create X" with no Priority 1 keyword falls through to Priority 5 (b-tdd). Routing table now includes concrete examples per row. Invocation format is skill-specific: b-tdd → `[plan-file]:[N]`; b-review → `[plan-file]`; b-gate/b-commit → no plan args. Check `## Dependencies` for blocking failures and parallel declarations (offer parallel for b-tdd steps only).
-4. Invoke skill and detect outcome. **On success**: auto-advance to step 5 (no user input needed). **On failure**: pause, capture reason, write `- [❌] N — reason`, run `git diff HEAD --stat` for partial changes, offer `git checkout -- .` rollback before retrying. **Manual steps (Priority 1)**: instruct user, then wait for `done`/`next`/`continue` — the only required pause in the happy path.
+4. Invoke skill and detect outcome. **On success**: auto-advance to step 5 (no user input needed). **b-gate failure shortcut**: if b-gate failed, extract failing check name + first ~10 error lines and offer two options: (1) auto-launch `/b-debug [failing-check]: [key error lines]`, or (2) fix manually. If user picks (1), invokes b-debug immediately, then re-runs b-gate; if passes, auto-advances. **On failure (non-gate or user picks manual)**: pause, capture reason, write `- [❌] N — reason`, run `git diff HEAD --stat` for partial changes, offer `git checkout -- .` rollback before retrying. **Manual steps (Priority 1)**: instruct user, then wait for `done`/`next`/`continue` — the only required pause in the happy path.
 5. Update plan checkbox (`[ ]` → `[x]`). Re-read file to recompute session step counter (`current [x] − baseline [x] at session start` — file-based, survives context compression).
 6. Loop until done. **NEEDS FIXES re-entry**: user signals fix → run `git diff HEAD --stat` to confirm real changes → ask "cosmetic or new behavior?" → cosmetic: reset b-gate and re-run; new behavior: route through b-tdd first, then b-gate, then b-review. Iron Law is never bypassed.
 
@@ -202,9 +204,9 @@ the finished result.
 ### b-gate
 
 Mandatory quality gate — runs after all implementation steps are done. Detects stack
-from config files and runs only checks that are present: **lint → typecheck → tests →
-security → clean-code → integration/e2e (soft block)**. Hard stops on lint failures, typecheck failures, test failures,
-and high/critical security findings. Soft blocks (warn, continue) on: medium/low security, formatting issues, and integration/e2e test failures (integration tests often require external services). Uses Bash only — no MCP required.
+from config files and runs only checks that are present: **lint → typecheck → tests → coverage → security → clean-code → integration/e2e (soft block)**. Hard stops on lint failures, typecheck failures, test failures, coverage threshold violations (when threshold explicitly configured), and high/critical security findings. Soft blocks (warn, continue) on: coverage tool present but no threshold configured, medium/low security, formatting issues, and integration/e2e test failures (integration tests often require external services). Uses Bash only — no MCP required.
+
+**Coverage enforcement (Step 2c.5):** Runs after tests pass. Three-tier behavior: (1) **hard-block** when a threshold is explicitly configured (`coverageThreshold` in jest, `fail_under` in pytest-cov/nyc) and actual coverage falls below it; (2) **soft-warn** when a coverage tool is detected but no threshold is set; (3) **skip** when no coverage tool is detected. Go exception: always soft-warn only (no native threshold enforcement) — reports coverage percentage from `go test -coverprofile` without hard-blocking.
 
 **Good triggers:**
 ```
@@ -235,14 +237,14 @@ b-analyze does deep structural analysis — call graphs, complexity, duplication
 ### b-review
 
 Pre-PR human-judgment review on changed code. Reads the git diff, establishes requirements
-baseline from the plan file (`.claude/b-plans/`) or `$ARGUMENTS`, then checks three
-dimensions: logic correctness (control flow, null handling, async safety, side effects),
-requirements coverage (maps each requirement to changed code — ✅/❌/⚠️ Partial), and
-test adequacy (behavior coverage, unhappy paths, regression safety). Uses
+baseline from the plan file (`.claude/b-plans/`) or `$ARGUMENTS`, then checks five
+dimensions: logic correctness (control flow, null handling, async safety, side effects, plus **security review** — auth/authz enforcement, input validation, sensitive data exposure, injection vectors, rate limiting on new public endpoints), requirements coverage (maps each requirement to changed code — ✅/❌/⚠️ Partial), test adequacy (behavior coverage, unhappy paths, regression safety), and an **observability check** on new handlers/endpoints/jobs (entry-point logging present, errors not swallowed, metric emitted if implied). Uses
 `sequentialthinking` to consolidate findings and surface what a senior engineer would
 flag. Does not run automated tooling — that is b-gate's role.
 
-**Small-change fast path:** If diff is ≤50 lines AND ≤2 files, accepts any non-empty requirements baseline (one sentence is sufficient) and skips the vague-response enforcement loop. Full enforcement applies for diffs >50 lines or >2 files.
+**Small-change fast path:** If diff is ≤50 lines AND ≤2 files, accepts any non-empty requirements baseline (one sentence is sufficient), skips the vague-response enforcement loop, and skips both the security review sub-section and the observability check. Full enforcement applies for diffs >50 lines or >2 files.
+
+**Issue enrichment:** After reading the plan file, checks for an `**Issue**:` field. If value starts with `http` → calls `firecrawl_scrape`, trims to 500 words, appends to requirements baseline as `**Issue context** (from [URL]): …`. If scrape returns <200 chars or HTTP 403 → skips silently: "Issue URL requires authentication — using URL as context reference only." If value is a ticket ID (not a URL) → displays as `**Issue reference**: [value]` in review output. If field absent → skips entirely.
 
 **Good triggers:**
 ```
@@ -311,6 +313,8 @@ similarity: `get_related_symbols`. For magic numbers/hardcoded strings: `search_
 For dbt/SQL projects: `search_columns`. For High findings matching a named anti-pattern,
 calls `brave_web_search`. Uses `sequentialthinking` to produce a sprint-prioritized
 action list. Does not fix anything; produces findings only.
+
+**Stale index detection:** When `resolve_repo` returns an existing index, calls `get_session_stats` and compares `files_indexed` against a Glob count of source files (`**/*.{ts,tsx,js,jsx,py,go,rs,java,rb,php,kt,swift}`). If drift >10%, calls `index_folder` to re-index before proceeding. If `get_session_stats` unavailable: notes "⚠️ Could not verify index freshness" and continues.
 
 **Quick/deep mode:** Pass `quick` as `$ARGUMENTS` to run Steps 1–2 only (structure map — no quality analysis, no sequential-thinking). Allowed calls in quick mode: `resolve_repo`, `suggest_queries`, `get_repo_outline`, `get_file_outline`. Quick mode output is structure overview only (no findings, no severity ratings). Default (no args or `deep`) runs full Steps 1–5.
 
@@ -387,10 +391,12 @@ Systematic, hypothesis-driven bug tracing. Resolves or indexes the codebase firs
 (`get_context_bundle` → `find_references` → `get_blast_radius` → `get_symbol_source`).
 For suspicious functions, uses `get_related_symbols`
 to find similar patterns elsewhere. For regression detection: `get_symbol_diff`. For
-error string origin: `search_text`. Forms ranked hypotheses with sequential-thinking,
-confirms root cause, then fixes. For library errors: `brave_web_search` → `firecrawl_scrape`
+error string origin: `search_text`. Forms ranked hypotheses with sequential-thinking.
+When static analysis is insufficient to confirm root cause, uses a **dynamic verification loop**: add 1–2 targeted log statements at the suspected choke point → instruct user to run the failing scenario and paste output → analyze output to confirm or eliminate hypothesis → remove debug logging after confirmation. Hard cap of 3 iterations; after 3 unconfirmed rounds, surfaces all gathered evidence and escalates (APM/profiler, isolation, or escalation). Confirms root cause, then fixes. For library errors: `brave_web_search` → `firecrawl_scrape`
 (with `firecrawl_map` fallback when scrape returns empty) → `b-docs`. Never patches
 before root cause is confirmed.
+
+**Stale index detection:** When `resolve_repo` returns an existing index, calls `get_session_stats` and compares `files_indexed` against a Glob count of source files (`**/*.{ts,tsx,js,jsx,py,go,rs,java,rb,php,kt,swift}`). If drift >10%, calls `index_folder` to re-index before proceeding. If `get_session_stats` unavailable: notes "⚠️ Could not verify index freshness" and continues.
 
 **Good triggers:**
 ```
@@ -528,6 +534,7 @@ b-gate ──── GATE PASSED ────────────────
 
 b-review ── read diff ────────────────────► Bash (git diff HEAD)
          ── requirements baseline ─────────► plan file (.claude/b-plans/) or $ARGUMENTS
+         ── Issue URL enrichment ──────────► firecrawl_scrape (optional, when **Issue**: URL present in plan)
          ── symbol context ────────────────► jcodemunch (get_symbol_source, get_context_bundle, optional)
          ── consolidate findings ──────────► sequential-thinking
          ── READY FOR PR ─────────────────► b-commit
@@ -539,7 +546,8 @@ b-docs ──── context7 has no index ──────► firecrawl   (dir
        ──── firecrawl insufficient ─────► b-research  (full multi-source research, active invoke)
        ──── context7 unavailable ───────► b-research  (active invoke — notify user then escalate directly)
 
-b-debug ─── trace execution path ────────► jcodemunch (resolve_repo → suggest_queries → get_context_bundle → find_references → get_blast_radius → get_symbol_source → get_related_symbols)
+b-debug ─── trace execution path ────────► jcodemunch (resolve_repo → stale index check → suggest_queries → get_context_bundle → find_references → get_blast_radius → get_symbol_source → get_related_symbols)
+        ─── stale index check ────────────► jcodemunch (get_session_stats → Glob count → index_folder if >10% drift, optional)
         ─── regression detection ────────► jcodemunch (get_symbol_diff)
         ─── error string lookup ─────────► jcodemunch (search_text)
         ─── post-fix index refresh ──────► jcodemunch (index_file on changed files)
@@ -549,8 +557,9 @@ b-debug ─── trace execution path ────────► jcodemunch (r
                                          ► b-docs      (verify API behavior)
 
 b-analyze ── quick mode ($ARGS=quick) ─────► jcodemunch (resolve_repo + suggest_queries + get_repo_outline + get_file_outline only)
-          ── full/deep mode (default) ────► jcodemunch (full 12-tool suite)
+          ── full/deep mode (default) ────► jcodemunch (full 13-tool suite)
           ── index or resolve ────────────► jcodemunch (resolve_repo → index_folder if needed)
+          ── stale index check ───────────► jcodemunch (get_session_stats → Glob count → index_folder if >10% drift, optional)
           ── unfamiliar codebase ─────────► jcodemunch (suggest_queries first)
           ── symbol inspection ───────────► jcodemunch (get_symbol_source, single or batch)
           ── dead code ─────────────────── ► jcodemunch (check_references + find_importers)

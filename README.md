@@ -33,16 +33,16 @@ All 5 MCPs must be connected. Verify with `/mcp` in Claude Code.
 
 | Skill | MCP(s) | Use when |
 |---|---|---|
-| [`b-plan`](#b-plan) | sequential-thinking, jcodemunch* | Before non-trivial coding; conditional feasibility gate (Step 0); Step 1 skips duplicate questions when Step 0 ran |
-| [`b-execute-plan`](#b-execute-plan) | — (Bash + Skill only) | Orchestrating the full pipeline with auto-advance on success; pauses only on failure, ambiguous routing, manual steps, or NEEDS FIXES |
+| [`b-plan`](#b-plan) | sequential-thinking, jcodemunch* | Before non-trivial coding; conditional feasibility gate (Step 0); deploy safety checkpoint (new routes → feature flags, DB migrations → ordering, new external services → availability); Step 1 skips duplicate questions when Step 0 ran; optional Issue/ticket field written to plan header |
+| [`b-execute-plan`](#b-execute-plan) | — (Bash + Skill only) | Orchestrating the full pipeline with auto-advance on success; two-tier context threshold (3 steps if `## Context` present, 5 otherwise); b-gate failures offer auto-launch b-debug; pauses only on failure, ambiguous routing, manual steps, or NEEDS FIXES |
 | [`b-tdd`](#b-tdd) | — (Bash only) | During implementation — Iron Law + Red-Green-Refactor; 7-language stack detection (Node/Python/Go/Rust/Java/Ruby/PHP) |
-| [`b-gate`](#b-gate) | — (Bash only) | After implementation — lint → typecheck → tests → security → clean-code → integration/e2e (soft block) |
-| [`b-review`](#b-review) | sequential-thinking, jcodemunch* | After b-gate — logic, requirements, edge cases, test adequacy; small-change fast path (≤50 lines, ≤2 files) |
+| [`b-gate`](#b-gate) | — (Bash only) | After implementation — lint → typecheck → tests → coverage threshold enforcement → security → clean-code → integration/e2e (soft block) |
+| [`b-review`](#b-review) | sequential-thinking, jcodemunch*, firecrawl* | After b-gate — logic, security checklist, observability check on new handlers/endpoints/jobs, requirements, edge cases, test adequacy; Issue URL enrichment via firecrawl when plan file has `**Issue**:` field; small-change fast path (≤50 lines, ≤2 files) |
 | [`b-commit`](#b-commit) | — (Bash only) | After b-review — generate commit message and PR description text (no git execution) |
 | [`b-docs`](#b-docs) | context7, firecrawl* | Before using any library or SDK |
 | [`b-research`](#b-research) | brave-search (web+news), firecrawl, context7*, sequential-thinking*, Agent* | Deep research, tool comparison, synthesis — optimized for token efficiency (3 URLs smart selection, strict post-scrape gate) |
-| [`b-analyze`](#b-analyze) | jcodemunch (12 tools), sequential-thinking*, brave-search* | Understand or review code before changing it; `quick` mode (structure map only) or full deep analysis |
-| [`b-debug`](#b-debug) | jcodemunch (9 tools), sequential-thinking, brave-search*, firecrawl* | Trace bugs that have no obvious cause |
+| [`b-analyze`](#b-analyze) | jcodemunch (13 tools), sequential-thinking*, brave-search* | Understand or review code before changing it; stale index detection (>10% file drift triggers re-index); `quick` mode (structure map only) or full deep analysis |
+| [`b-debug`](#b-debug) | jcodemunch (10 tools), sequential-thinking, brave-search*, firecrawl* | Trace bugs that have no obvious cause; dynamic verification loop (add-log → run → analyze, 3-iteration cap with escalation path) for runtime bugs static analysis can't confirm; stale index detection (>10% file drift triggers re-index) before execution path mapping |
 | [`b-observe`](#b-observe) | jcodemunch (6 tools), sequential-thinking* | Static observability audit — missing logs, swallowed errors, metrics gaps, tracing coverage |
 
 *optional — used conditionally

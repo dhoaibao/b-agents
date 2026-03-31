@@ -51,6 +51,7 @@ Scan the project root for config files to determine which checks are available:
 | **Tests** | `jest.config.*`, `vitest.config.*`, `pytest.ini`, `pyproject.toml [tool.pytest]`, `*_test.go` files, `Makefile` with `test` target |
 | **Security** | `npm audit` (if `package-lock.json` exists), `pip-audit` (if `requirements*.txt` exists), `govulncheck` (if Go project) |
 | **Clean code** | `prettier --check` (if `.prettierrc*` exists), `black --check` (if `pyproject.toml [tool.black]` or `.black` config exists), `gofmt -l` (Go) |
+| **Coverage** | `jest.config.*` or `package.json` jest field with `coverageThreshold`; `setup.cfg` or `pyproject.toml [tool.coverage.report]` with `fail_under`; `.nycrc` or `nyc` field in `package.json`; `*_test.go` files (Go — soft-block only, no native threshold) |
 | **Integration/E2E** | Jest files matching `*integration*` or `*e2e*`, pytest `integration` marker in config, `Makefile` with `test-integration` or `test-e2e` target, vitest project named `e2e` |
 
 For each check: if no config file is found, skip the check and note it as "not configured" — do not fail because of missing tooling.
@@ -107,7 +108,39 @@ pytest
 go test ./...
 ```
 
-If tests fail: output the failure summary, stop. Do not proceed to security.
+If tests fail: output the failure summary, stop. Do not proceed to coverage.
+
+#### 2c.5. Coverage
+
+Run after tests pass. Behavior depends on whether a coverage threshold is configured:
+
+**Hard-block** (fail the gate) if a coverage threshold is explicitly configured AND actual coverage falls below it:
+
+```bash
+# Node.js (jest) — reads coverageThreshold from jest.config.* or package.json jest field
+npm test -- --coverage
+
+# Node.js (nyc) — reads threshold from .nycrc or package.json nyc field
+nyc npm test
+
+# Python (pytest-cov) — reads fail_under from setup.cfg [coverage:report] or pyproject.toml [tool.coverage.report]
+pytest --cov --cov-fail-under=$(grep fail_under setup.cfg | awk -F= '{print $2}' | tr -d ' ')
+# or: pytest --cov  (pytest-cov reads fail_under automatically from config)
+```
+
+**Soft-warn** (report warning, continue) if a coverage tool is detected but no explicit threshold is configured:
+
+```bash
+# Run coverage and report the percentage — do not fail
+npm test -- --coverage --coverageThreshold='{}'
+# or: pytest --cov
+```
+
+**Skip entirely** if no coverage tool is detected for the stack.
+
+**Go note**: Go has no native coverage threshold enforcement. If `*_test.go` files are present, run `go test -coverprofile=coverage.out ./...` and report the total coverage percentage as a soft warning only — never hard-block.
+
+If coverage hard-blocks: output the coverage report showing which files/lines are below threshold. Stop. Do not proceed to security.
 
 #### 2d. Security
 
@@ -190,6 +223,13 @@ Checks run:
   ✅ Lint          — [tool] — PASSED
   ✅ Typecheck     — [tool] — PASSED
   ✅ Tests         — [N passed, 0 failed]
+  ✅ Coverage      — [N%] — above threshold ([configured threshold]%)
+  — or —
+  ❌ Coverage      — [N%] — below threshold ([configured threshold]%) — HARD BLOCK
+  — or —
+  ⚠️  Coverage     — [N%] — no threshold configured (soft warn)
+  — or —
+  ⚠️  Coverage     — not configured (skipped)
   ✅ Security      — no high/critical vulnerabilities
   ✅ Clean code    — [tool] — PASSED
   ✅ Integration   — [N passed] (soft block — passed)
@@ -221,8 +261,8 @@ On pass → next step: run **b-review** to verify logic correctness and requirem
 
 ## Rules
 
-- Checks run in fixed order: lint → typecheck → tests → security → clean-code. Never reorder. **Why**: lint and typecheck catch syntax/type errors that would cause false test failures — running tests against broken code produces misleading output. Fix the foundation first.
-- Hard stop on: lint failure, typecheck failure, test failure, high/critical security finding. **Why**: these indicate the code is not shippable. Soft failures (formatting, medium security) do not block shipping but should be tracked.
+- Checks run in fixed order: lint → typecheck → tests → coverage → security → clean-code. Never reorder. **Why**: lint and typecheck catch syntax/type errors that would cause false test failures — running tests against broken code produces misleading output. Coverage runs after tests so it uses the same test run. Fix the foundation first.
+- Hard stop on: lint failure, typecheck failure, test failure, coverage threshold violation (when threshold is explicitly configured), high/critical security finding. **Why**: these indicate the code is not shippable. Soft failures (no-threshold coverage, formatting, medium security) do not block shipping but should be tracked.
 - Soft block (warn, continue) on: medium/low security findings, formatting failures.
 - If a check is not configured, skip it and note it — do not fail because tooling is absent.
 - Do not install missing tools — if a tool is absent, note "not installed" and skip.

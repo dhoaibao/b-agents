@@ -43,6 +43,7 @@ From `jcodemunch` MCP server:
 - `get_symbol_diff` — detect regressions by diffing a symbol between two indexed states.
 - `search_text` — search for error strings or regex patterns across the codebase.
 - `index_file` — re-index a single changed file after applying a fix (keeps jcodemunch index fresh for subsequent b-analyze calls)
+- `get_session_stats` — from `jcodemunch` MCP server *(optional, for stale index detection — verify index freshness before mapping code structure)*
 
 From `sequential-thinking` MCP server:
 - `sequentialthinking` — structured reasoning to form and rank hypotheses.
@@ -83,6 +84,7 @@ or "recent changes" is often the fastest path to root cause.
 Use `jcodemunch` to trace the execution path in this order:
 
 0. **Index or resolve** — first call `resolve_repo(path="/absolute/project/root")`. If it returns a repo identifier, use it directly (index already exists). If it returns no match, call `index_folder` with the absolute path to the project root and `use_ai_summaries: false`. Note the `repo` identifier from the response (format: `local/[name]-[hash]`) — pass this as `repo` to every subsequent jcodemunch call. If `file_count` is 0, jcodemunch can't parse this codebase → use Glob/Grep to map files manually instead.
+   - **Stale index check** (only when `resolve_repo` returned an existing index — skip when `index_folder` was just called): call `get_session_stats(repo=[identifier])` and read the `files_indexed` count. Use `Glob("**/*.{ts,tsx,js,jsx,py,go,rs,java,rb,php,kt,swift}")` to count actual source files. If `|files_indexed − actual_count| / actual_count > 0.10` (more than 10% drift), call `index_folder` to re-index before proceeding — the index is stale and debug tracing will miss recently added or deleted files. If `get_session_stats` is unavailable or returns no file count metric, skip the check and note in output: "⚠️ Could not verify index freshness — analysis may miss recently added/deleted files."
 0.5. **suggest_queries** — if the codebase is unfamiliar, call `suggest_queries` immediately after indexing. Use the output to identify entry points, key symbols, and language distribution before tracing the execution path.
 1. `get_context_bundle` on the entry point (route handler, CLI command, event listener) — get full context of the starting point
 2. `find_references` on the relevant function — trace all callers and callees across files
@@ -136,6 +138,18 @@ Test hypotheses starting from the most likely:
 - Use `get_related_symbols` on a suspicious function to discover other functions with similar logic — useful when the bug pattern may exist in multiple places.
 - If the codebase uses a library: invoke `b-docs` to verify the correct API behavior for that library version.
 - **Regression detection**: if the bug appeared after a recent change, use `get_symbol_diff` to compare the current symbol against an older indexed state (requires two index snapshots)
+
+**Dynamic verification** — if static analysis is insufficient to confirm root cause (plausible hypothesis but not provable from code alone):
+
+1. Add one or two targeted log statements at the suspected choke point — not scattered across files.
+2. Instruct the user to run the failing scenario and paste the output.
+3. Analyze the output: does it confirm or eliminate the hypothesis?
+4. If confirmed → proceed to Step 5 (Fix). If eliminated → mark hypothesis as ruled out, advance to the next ranked hypothesis, restart from sub-step 1.
+5. After root cause is confirmed, remove all debug logging added during this loop.
+
+Cap at **3 iterations** — if root cause is not confirmed after 3 instrumentation rounds, surface current evidence to the user:
+
+> "Root cause unconfirmed after 3 instrumentation rounds — here's what we know: [evidence gathered]. Consider: adding APM/profiler, reproducing in isolation, or escalating."
 
 **Stop when root cause is confirmed** — don't continue investigating other hypotheses once found.
 

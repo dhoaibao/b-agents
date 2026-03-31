@@ -40,11 +40,13 @@ requirements baseline for Step 2.
 - `Bash` — to read git diff and changed file list.
 - `sequentialthinking` — from `sequential-thinking` MCP server — structured review reasoning.
 - `get_symbol_source`, `get_context_bundle` — from `jcodemunch` MCP server *(optional, for reading full context of changed symbols)*
+- `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for fetching issue/ticket URL content when an `**Issue**:` URL is present in the plan file)*
 
 If sequential-thinking is unavailable: reason through review dimensions inline, document each explicitly.
 If jcodemunch is unavailable: use Read tool to inspect changed files directly.
+If firecrawl is unavailable: skip Issue URL fetch; display ticket ID or URL as a context reference only.
 
-Graceful degradation: ✅ Possible — core review works with Bash + Read. sequential-thinking improves structure of findings; jcodemunch improves symbol context. All optional.
+Graceful degradation: ✅ Possible — core review works with Bash + Read. sequential-thinking improves structure of findings; jcodemunch improves symbol context; firecrawl enriches issue context. All optional.
 
 ## Steps
 
@@ -75,6 +77,12 @@ If the diff is large (>500 lines changed), ask the user which area to focus on f
 Determine what the code was *supposed* to do:
 
 1. **Check for plan file** — look for `.claude/b-plans/[task-slug].md`. If found, read the `## Steps` section and the original scope statement. This is the primary requirements source.
+
+   1b. **Issue enrichment** *(runs only when a plan file was found in step 1)*: scan the plan file header for an `**Issue**:` field.
+   - If the value starts with `http`: call `firecrawl_scrape` with `url=[value]` and `formats: ["markdown"]`. Trim the result to 500 words and append to the requirements baseline as: `**Issue context** (from [URL]):\n[scraped content]`. If the scrape returns <200 characters or an HTTP auth/403 error: skip silently and note in output: "Issue URL requires authentication — using URL as context reference only: [value]."
+   - If the value is a ticket ID (does not start with `http`): display it in the review output header as: `**Issue reference**: [value]`. No fetch attempted.
+   - If the `**Issue**:` field is absent or empty: skip this sub-step entirely.
+
 2. **Check $ARGUMENTS** — if provided:
    - If `$ARGUMENTS` ends in `.md` → use `Read` to verify the file exists. If it exists, treat it as the primary requirements source (same as a plan file found in `.claude/b-plans/`).
    - If `$ARGUMENTS` does not end in `.md` → treat it as a text description of requirements.
@@ -113,6 +121,16 @@ Read the changed code (use `get_symbol_source` or Read tool) and check:
 **Side effects**
 - Does the code modify shared state unexpectedly?
 - Are there unintended writes to external systems (DB, cache, queue) in non-obvious paths?
+
+**Security review** *(skip if diff ≤50 lines AND ≤2 files — same fast-path threshold as Step 2)*
+
+Check changed code only for these five vectors:
+
+1. **Auth/authz** — do new endpoints or handlers require authentication? Is it enforced? Are role/permission checks correct?
+2. **Input validation** — is untrusted input sanitized before use in DB queries, filesystem paths, or `eval`/exec calls?
+3. **Sensitive data** — are passwords, tokens, or PII logged or returned in responses where they should not be?
+4. **Injection vectors** — is dynamic SQL, shell commands, or HTML constructed with unsanitized input?
+5. **Rate limiting** — do new publicly accessible endpoints have rate limiting in place?
 
 For each issue found: state the file, line range, what the problem is, and what the correct behavior should be.
 
@@ -153,10 +171,26 @@ If tests are missing for a requirement or critical edge case: flag as a finding,
 
 ---
 
+### Step 5.5 — Observability check *(conditional)*
+
+**Skip entirely if**: diff is ≤50 lines AND ≤2 files (same fast-path threshold as Step 2).
+
+**Skip entirely if**: the diff does not add new endpoints, route handlers, background jobs, or queue consumers. If the change only modifies existing behavior or is a pure fix, skip this step.
+
+**When triggered** — check *changed code only* for minimum instrumentation:
+
+1. **Entry-point logging** — is there at least one structured log call at the handler entry point? (e.g. `logger.info(...)`, `log.Printf(...)`, structured JSON log.) A single log at entry is sufficient; this is not a coverage audit.
+2. **Error capture** — are errors caught and logged or re-raised? Check for try/catch/except blocks that swallow errors silently (no log, no re-raise). A swallowed error is an observability black hole.
+3. **Metric emission** — if the new code implies a metric (new endpoint → request count/latency, new background job → job duration/success rate), is a metric emitted? This check is advisory — flag missing metrics as a suggestion, not a blocker.
+
+**Note**: this is not a full observability audit — only minimum instrumentation on new code. For a complete instrumentation review → run `b-observe` separately.
+
+---
+
 ### Step 6 — Use sequential-thinking to consolidate
 
 Call `sequentialthinking` with:
-> "Given these review findings [list from Steps 3–5], which issues must be fixed before this PR can be merged, which are suggestions, and what specific question would a senior engineer ask about this code?"
+> "Given these review findings [list from Steps 3–5.5], which issues must be fixed before this PR can be merged, which are suggestions, and what specific question would a senior engineer ask about this code?"
 
 Use the output to produce the final report.
 
@@ -191,6 +225,14 @@ Use the output to produce the final report.
 — or —
 ⚠️ Missing test: [behavior] — [why it matters]
 ❌ Missing test: [critical behavior] — [risk if untested]
+
+---
+
+#### Observability
+*(skipped — diff ≤50 lines / ≤2 files, or no new handlers/endpoints/jobs)*
+— or —
+✅ Entry-point logging present, errors captured
+⚠️ [issue]: [file:line] — [missing instrumentation] → [suggestion]
 
 ---
 

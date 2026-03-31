@@ -93,6 +93,9 @@ Append a `## Feasibility` section to the plan file (optional — only if Step 0 
 - **What already exists?** Is this greenfield or modifying existing code?
 - **What are the constraints?** Deadlines, must-not-break areas, tech stack limits?
 
+**In both cases**, ask once (optional):
+- **Issue/ticket URL or ID?** (optional — leave blank to skip) If provided, store as `**Issue**: [value]` in the plan file header, after `**Created**`. Accepts any format: full URL (`https://linear.app/…`, `https://github.com/…/issues/123`), short ticket ID (`PROJ-456`, `#123`), or free-text reference.
+
 If ambiguous, ask one focused clarifying question. Once clear, proceed.
 
 ---
@@ -127,6 +130,22 @@ Use `sequential-thinking` to create atomic steps:
 - State the 2–3 viable approaches and the key trade-offs (complexity, performance, coupling).
 - Pick one and document the reason.
 - Do not leave architecture decisions implicit inside a step description.
+
+**Deploy safety checkpoint** — after decomposing steps, scan the plan for the following patterns and annotate accordingly:
+
+(a) **Feature flags** — steps that add new routes, endpoints, or user-facing UI:
+  - Mark as: `⚠️ consider feature flag: new behavior reachable in production without explicit enable`
+  - Only flag steps with new user-visible behavior — not internal refactors.
+
+(b) **Migration ordering** — steps that include DB schema changes (new table, column, index, constraint modification):
+  - **Additive migrations** (add column, add table): run **before** app deploy — document as a step dependency note.
+  - **Destructive migrations** (drop column, alter type): run **after** old code is fully removed — document as a step dependency note.
+  - Label the migration step with: `⚠️ deploy order: [run before / run after] app deploy`
+
+(c) **External dependencies** — steps that add new external service calls, queues, or third-party APIs:
+  - Mark as: `⚠️ verify availability in target environment before deploy`
+
+Document any flags found under the plan's `## Risks` section. If no patterns match, skip this checkpoint silently — do not add empty sections.
 
 ---
 
@@ -181,6 +200,7 @@ Language: always English — write plan files in English regardless of the user'
 **Scope**: [one sentence — what this plan covers]
 **End state**: [what "done" looks like]
 **Created**: [date]
+**Issue**: [URL, ticket ID, or omit this line entirely if not applicable]
 
 ---
 
