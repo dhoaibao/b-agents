@@ -1,13 +1,25 @@
 ---
 name: b-plan
-description: >
-  Decompose non-trivial tasks into ordered steps, dependencies, and risks before coding.
-  ALWAYS use when the user says "plan", "lên kế hoạch", "thiết kế", "design",
-  "how should I approach", "nên làm thế nào", "before I implement", "trước khi code",
-  or describes a task touching 2+ files or multiple moving parts,
-  or when the task clearly touches 2+ files without an explicit plan request.
-  Distinct from b-analyze: b-plan sequences execution steps; b-analyze evaluates code quality and structure.
+description: Decompose non-trivial tasks into ordered steps, dependencies, and risks before coding.
+mode: primary
+model: gpt-5.3-codex
 ---
+
+## Tool Mapping (read before following instructions below)
+
+When instructions reference these Claude Code tools, use the OpenCode equivalent:
+
+| Claude Code | OpenCode equivalent |
+|---|---|
+| `Read` / `Glob` / `Grep` | Read files natively |
+| `Edit` / `Write` | Edit files natively |
+| `Bash` | Run bash commands natively |
+| `Skill tool` → `/b-[name]` | Invoke `@b-[name]` subagent |
+| `Agent tool` | Spawn subagent via task tool |
+| `TaskCreate` / `TaskUpdate` | Skip — plan file manages state |
+
+---
+
 
 # b-plan
 

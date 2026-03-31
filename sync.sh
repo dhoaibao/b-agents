@@ -63,3 +63,42 @@ done
 
 echo ""
 echo "✨ Done! Skills are live in $SKILLS_DIR"
+
+# ── 5. Sync OpenCode agents ───────────────────────────────────────────────────
+OPENCODE_AGENTS_SRC="$LOCAL_REPO/.opencode/agents"
+OPENCODE_AGENTS_DST="$HOME/.config/opencode/agents"
+
+if [ -d "$OPENCODE_AGENTS_SRC" ]; then
+  mkdir -p "$OPENCODE_AGENTS_DST"
+
+  # Remove stale symlinks (agent files deleted from repo)
+  echo "🧹 Removing stale OpenCode agents..."
+  for existing in "$OPENCODE_AGENTS_DST"/*.md; do
+    [ -e "$existing" ] || continue
+    agent_name=$(basename "$existing")
+    if [ -L "$existing" ] && [ ! -f "$OPENCODE_AGENTS_SRC/$agent_name" ]; then
+      rm "$existing"
+      echo "  🗑  removed $agent_name"
+    fi
+  done
+
+  # Symlink each agent file
+  echo "🔗 Syncing OpenCode agents..."
+  for agent_file in "$OPENCODE_AGENTS_SRC"/*.md; do
+    [ -f "$agent_file" ] || continue
+    agent_name=$(basename "$agent_file")
+    target="$OPENCODE_AGENTS_DST/$agent_name"
+
+    if [ -L "$target" ] || [ -f "$target" ]; then
+      rm "$target"
+    fi
+
+    ln -s "$agent_file" "$target"
+    echo "  ✅ $agent_name"
+  done
+
+  echo ""
+  echo "✨ OpenCode agents live in $OPENCODE_AGENTS_DST"
+else
+  echo "ℹ️  No .opencode/agents/ found — skipping OpenCode agent sync"
+fi

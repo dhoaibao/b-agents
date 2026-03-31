@@ -28,7 +28,9 @@ where do I start with the payment gateway integration?
 project root — with ordered steps (checkbox format), dependency map, risk flags, unknowns
 marked as `b-docs` or `b-research` calls, and an optional `## Feasibility` section when
 Step 0 ran. b-analyze and b-docs findings are appended to the same file for use in
-the execution session.
+the execution session. Two additional sections are always included for OpenCode execution:
+`## Last Gate Failure` (written by b-execute-plan when b-gate fails) and
+`## Review Feedback` (written when b-review returns NEEDS FIXES).
 
 **Feasibility gate (Step 0):** Runs when task scope is uncertain or decision is not
 yet made. Confirms the Understanding Lock (one-sentence feature description + success

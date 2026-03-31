@@ -1,11 +1,13 @@
 # b-agent-skills
 
-A personal skill suite for Claude Code, organized into two groups:
+A personal skill suite for **Claude Code** and **OpenCode**, organized into two groups:
 
 - **Development skills** — a tightly integrated pipeline for software development work, leveraging all 5 MCPs
 - **Personal / daily skills** — standalone utilities for everyday personal use
 
 The development skills form a linear pipeline: **b-plan → b-tdd → b-gate → b-review → b-commit**, with b-analyze, b-debug, b-docs, and b-research as supporting tools. The `b-execute-plan` skill orchestrates this pipeline with explicit checkpoints and state tracking.
+
+**Hybrid workflow supported**: Claude Code handles planning (`b-plan`), OpenCode handles execution (`b-execute-plan` pipeline). Plan files in `.claude/b-plans/*.md` serve as the shared contract between the two tools.
 
 All development skills enforce a **git-safety guardrail**: destructive git commands (`git push`, `git commit`, `git reset`, `git revert`, `git clean -f`, `git checkout -- <file>`, `git branch -D`) are prohibited except in `b-commit`, which owns all git write operations. b-execute-plan may offer rollback to the user but never auto-executes it.
 
@@ -66,7 +68,7 @@ output format, rules, and distinctions between similar skills.
 
 ## Installation
 
-Copy each skill folder into your Claude Code skills directory:
+### Claude Code
 
 ```bash
 # Option A — manual copy
@@ -83,5 +85,19 @@ Verify all MCPs are connected:
 
 All 5 must show `✓ Connected`:
 `context7`, `brave-search`, `firecrawl`, `jcodemunch`, `sequential-thinking`
+
+### OpenCode (hybrid execution)
+
+See [OPENCODE.md](OPENCODE.md) for full setup guide. In short:
+
+```bash
+# Sync agent files to OpenCode global agents directory
+bash ~/.b-agent-skills/sync.sh   # Step 5 handles OpenCode agents automatically
+```
+
+Copy `AGENTS.md` to each project root where OpenCode will execute plans:
+```bash
+cp ~/.b-agent-skills/AGENTS.md /path/to/your/project/AGENTS.md
+```
 
 ---
