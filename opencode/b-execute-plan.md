@@ -2,7 +2,7 @@
 name: b-execute-plan
 description: Orchestrates the full development pipeline (b-tdd → b-gate → b-review → b-commit) by reading plan files, tracking step completion, and invoking subagents for each stage. Use for "execute plan", "chạy plan", "thực thi kế hoạch", "run plan".
 mode: primary
-model: github-copilot/gpt-5.3-codex
+model: hdwebsoft/claude-sonnet-4-6
 ---
 
 ## Tool Mapping (read before following instructions below)

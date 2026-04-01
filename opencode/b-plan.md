@@ -2,7 +2,7 @@
 name: b-plan
 description: Decompose non-trivial tasks into ordered steps, dependencies, and risks before coding.
 mode: primary
-model: github-copilot/gpt-5.3-codex
+model: hdwebsoft/claude-sonnet-4-6
 ---
 
 ## Tool Mapping (read before following instructions below)

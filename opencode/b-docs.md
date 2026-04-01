@@ -2,7 +2,7 @@
 name: b-docs
 description: Fetch live, version-accurate library documentation from Context7 before writing integration code.
 mode: subagent
-model: github-copilot/gpt-5.3-codex
+model: hdwebsoft/gpt-5.4
 ---
 
 ## Tool Mapping (read before following instructions below)
