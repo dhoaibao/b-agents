@@ -61,15 +61,30 @@ Graceful degradation: ✅ Possible — core pipeline always works.
 
 ### Step 0 — Pre-execution analysis *(conditional)*
 
-Run if: the plan modifies existing code AND no `## Context` section exists in the plan file.
-Skip if: plan is greenfield OR `## Context` already present.
+**Skip immediately** if any of these is true:
+- Plan is greenfield (no existing modules are changed)
+- `## Context` section already exists in the plan file
+- Fewer than 3 pending implementation steps remain
+- Fewer than 2 distinct file paths or module names found in `## Steps`
 
-1. Scan the plan's `## Steps` section for explicit file paths.
-2. If explicit paths found → invoke `@b-analyze` scoped to exactly those files.
-3. If no explicit paths → parse the plan's **Scope** for module/layer names and scope to those directories.
-4. If scope still ambiguous → ask: "Which module or directory should I analyze before starting?"
+**Proceed only if all four conditions are met**.
 
-Append b-analyze output as a `## Context` section to the plan file.
+**Determine scope before asking:**
+1. Scan `## Steps` for explicit file paths or backtick module names.
+2. If found → scope to exactly those files/directories.
+3. If not → parse the plan's **Scope** for module/layer names.
+4. If still ambiguous → ask: "Which module or directory should I analyze?"
+
+**Ask before running** (never auto-invoke):
+```
+Run b-analyze on [resolved scope] before starting?
+This builds codebase context for the execution (~5–10k tokens).
+  y — run analysis
+  n — skip (save tokens, start pipeline immediately)
+```
+Wait for user response. If `n`: skip Step 0 entirely and proceed to Step 1.
+
+If `y`: invoke `@b-analyze` scoped to the resolved paths. Append output as a `## Context` section to the plan file.
 
 ### Step 1 — Locate and load plan file
 

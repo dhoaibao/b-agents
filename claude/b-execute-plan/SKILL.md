@@ -36,16 +36,30 @@ Graceful degradation: ✅ Possible — core pipeline (Read/Edit/Skill) always wo
 
 ### Step 0 — Pre-execution analysis *(conditional)*
 
-Run if: the plan modifies existing code AND no `## Context` section exists in the plan file.
-Skip if: the plan is greenfield (no existing modules are changed) OR a `## Context` section is already present.
+**Skip immediately** if any of these is true:
+- Plan is greenfield (no existing modules are changed)
+- `## Context` section already exists in the plan file
+- Fewer than 3 pending implementation steps remain
+- Fewer than 2 distinct file paths or module names found in `## Steps`
 
-**Determine scope before invoking b-analyze — never run unconstrained:**
+**Proceed only if all four conditions are met** (plan modifies existing code, no context yet, ≥3 pending steps, ≥2 distinct file/module references).
+
+**Determine scope before asking — never run unconstrained:**
 1. Scan the plan's `## Steps` section for explicit file paths (patterns: `src/`, `path/to/file.ts`, directory names like `services/`, module names in backticks).
-2. If explicit paths found → invoke b-analyze scoped to exactly those files/directories.
+2. If explicit paths found → scope to exactly those files/directories.
 3. If no explicit paths → parse the plan's **Scope** statement for module or layer names (e.g., "auth module", "notification service") and scope to those directories.
-4. If scope is still ambiguous after steps 1–3 → ask: "Which module or directory should I analyze before starting? (e.g., `src/services/`, `src/api/`)" — do not run a full-repo analysis.
+4. If scope is still ambiguous → ask: "Which module or directory should I analyze before starting? (e.g., `src/services/`, `src/api/`)" — do not run a full-repo analysis.
 
-Append b-analyze output as a `## Context` section to the plan file using `Edit`.
+**Ask before running** (never auto-invoke):
+```
+Run b-analyze on [resolved scope] before starting?
+This builds codebase context for the execution (~5–10k tokens).
+  y — run analysis
+  n — skip (save tokens, start pipeline immediately)
+```
+Wait for user response. If `n` or no response: skip Step 0 entirely and proceed to Step 1.
+
+If `y`: invoke b-analyze scoped to the resolved paths. Append output as a `## Context` section to the plan file using `Edit`.
 
 ### Step 1 — Locate and load plan file
 Detect plan file from:
