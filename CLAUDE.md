@@ -100,13 +100,13 @@ When deciding which MCPs a skill should use:
 
 ## OpenCode sync rule
 
-**All skills in this repo are OpenCode-paired** — every `b-[name]/SKILL.md` has a corresponding `.opencode/agents/b-[name].md`. All paired skills must stay in sync with their SKILL.md in the same commit:
+**All skills in this repo are OpenCode-paired** — every `claude/b-[name]/SKILL.md` has a corresponding `opencode/b-[name].md`. All paired skills must stay in sync with their SKILL.md in the same commit:
 
-| Change type | `.opencode/agents/` action |
+| Change type | `opencode/` action |
 |---|---|
-| **Create** skill that needs OpenCode subagent | Create `.opencode/agents/b-[name].md` |
-| **Update** SKILL.md (any change) | Update `.opencode/agents/b-[name].md` body |
-| **Delete** skill | Delete `.opencode/agents/b-[name].md` |
+| **Create** skill that needs OpenCode subagent | Create `opencode/b-[name].md` |
+| **Update** SKILL.md (any change) | Update `opencode/b-[name].md` body |
+| **Delete** skill | Delete `opencode/b-[name].md` |
 
 **Create** — a skill needs an agent file when it is invoked by another skill via `Skill` tool, or should be available as `@b-[name]` in OpenCode sessions.
 
@@ -137,7 +137,7 @@ Intentional differences to preserve in `b-execute-plan` agent file:
 | b-execute-plan workflow changes (how pipeline is invoked) | `## Invoking the execution pipeline` |
 | Git safety rules change | `## Git safety` |
 
-**Agent file structure** — every `.opencode/agents/b-[name].md` follows this format:
+**Agent file structure** — every `opencode/b-[name].md` follows this format:
 
 ```markdown
 ---
@@ -160,7 +160,7 @@ The **Tool Mapping preamble is fixed** — never modify it when updating agent f
 **How to update**: copy SKILL.md content from the `# b-[name]` heading to end of file, paste into the agent file body after the `---` separator, replacing the previous body.
 
 **How to add a new paired skill**:
-1. Create `.opencode/agents/b-[name].md` with the structure above.
+1. Create `opencode/b-[name].md` with the structure above.
 2. `sync.sh` picks it up automatically — no script changes needed.
 3. Update `OPENCODE.md` model assignments table if the new skill uses a non-default model.
 
@@ -176,7 +176,7 @@ The **Tool Mapping preamble is fixed** — never modify it when updating agent f
 | **Update** skill | Update `Use when` cell and MCP(s) cell if changed | Rewrite the skill's reference section to match |
 | **Delete** skill | Remove row from skills overview table | Remove the skill's reference section entirely |
 
-Never leave README or REFERENCE out of sync with a SKILL.md change. If a PR touches `b-[skill]/SKILL.md`, it must also touch both doc files.
+Never leave README or REFERENCE out of sync with a SKILL.md change. If a PR touches `claude/b-[skill]/SKILL.md`, it must also touch both doc files.
 
 ---
 
@@ -198,8 +198,11 @@ Before merging any SKILL.md change, verify:
 
 ```
 b-agent-skills/
-├── b-new-skill/
-│   └── SKILL.md          ← only file needed
+├── claude/
+│   └── b-new-skill/
+│       └── SKILL.md      ← Claude Code skill file
+├── opencode/
+│   └── b-new-skill.md    ← OpenCode agent file
 ├── sync.sh
 ├── README.md
 ├── REFERENCE.md
@@ -214,9 +217,9 @@ b-agent-skills/
 
 ### How to add to sync
 
-1. Create the folder at repo root: `mkdir b-new-skill`
-2. Add `b-new-skill/SKILL.md` with valid frontmatter (`name` + `description`)
-3. `sync.sh` picks up any root folder containing `SKILL.md` automatically — no script changes needed
+1. Create `claude/b-new-skill/SKILL.md` with valid frontmatter (`name` + `description`)
+2. Create `opencode/b-new-skill.md` as the paired OpenCode agent file
+3. `sync.sh` picks up both automatically — no script changes needed
 4. Update `README.md` skills overview table
 5. Update `REFERENCE.md` with a detailed reference section
 6. Commit, push, run `sync.sh` on target machines

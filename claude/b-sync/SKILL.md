@@ -1,29 +1,15 @@
 ---
 name: b-sync
-description: Sync, update, or bootstrap Claude skills from the b-agent-skills GitHub repo.
-mode: subagent
-model: claude-haiku-4-5
+description: >
+  Sync, update, or bootstrap Claude skills from the b-agent-skills GitHub repo.
+  ALWAYS use when the user says "sync b-skills", "update b-skills", "install b-skills on new machine",
+  "pull latest b-skills", "đồng bộ skills", "cập nhật skills", "cài skills mới".
+  Distinct from other skills: b-sync only manages skill installation — it does not invoke other skills.
 ---
-
-## Tool Mapping (read before following instructions below)
-
-When instructions reference these Claude Code tools, use the OpenCode equivalent:
-
-| Claude Code | OpenCode equivalent |
-|---|---|
-| `Read` / `Glob` / `Grep` | Read files natively |
-| `Edit` / `Write` | Edit files natively |
-| `Bash` | Run bash commands natively |
-| `Skill tool` → `/b-[name]` | Invoke `@b-[name]` subagent |
-| `Agent tool` | Spawn subagent via task tool |
-| `TaskCreate` / `TaskUpdate` | Skip — plan file manages state |
-
----
-
 
 # b-sync
 
-Syncs Claude skills from the public `b-agent-skills` GitHub repo to `~/.claude/skills/` using git + HTTPS. No extra tools required — just `git`.
+Syncs Claude Code skills and/or OpenCode agents from the public `b-agent-skills` GitHub repo using git + HTTPS. No extra tools required — just `git`.
 
 ## When to use
 
@@ -40,9 +26,13 @@ Syncs Claude skills from the public `b-agent-skills` GitHub repo to `~/.claude/s
 ## How it works
 
 - `~/.b-agent-skills/` — local clone of the repo (source of truth)
-- `~/.claude/skills/<skill-name>` — symlinks pointing into the clone.
+- `claude/b-[name]/SKILL.md` — Claude Code skill files (source)
+- `opencode/b-[name].md` — OpenCode agent files (source)
+- `~/.claude/skills/<skill-name>` — symlinks to Claude Code skills
+- `~/.config/opencode/agents/<skill-name>.md` — symlinks to OpenCode agents
 - Updating = `git pull` → symlinks stay valid automatically.
 - Stale symlinks (skills removed from repo) are cleaned up automatically on each sync.
+- `sync.sh` prompts which platform to sync: Claude Code, OpenCode, or both.
 
 ## Tools required
 
@@ -68,22 +58,23 @@ bash ~/.b-agent-skills/sync.sh
 
 This will:
 1. `git pull` the latest changes from the repo
-2. Re-symlink any new skill folders into `~/.claude/skills/`
-3. Remove symlinks for skills that no longer exist in the repo
+2. Prompt which platform to sync (Claude Code / OpenCode / both)
+3. Re-symlink any new skill/agent files into the appropriate destination
+4. Remove symlinks for skills that no longer exist in the repo
 
 ## What sync.sh does (for reference)
 
 - Pulls latest from `main`
-- Scans all root-level folders in the repo.
-- Symlinks folders that contain a `SKILL.md` into `~/.claude/skills/`
-- Removes stale symlinks for skills deleted from the repo.
-- Skips anything without a `SKILL.md` (e.g. `sync.sh` itself, `README.md`)
+- Asks: sync Claude Code, OpenCode, or both?
+- **Claude Code**: scans `claude/b-[name]/` folders; symlinks those with `SKILL.md` into `~/.claude/skills/`
+- **OpenCode**: scans `opencode/b-[name].md` files; symlinks them into `~/.config/opencode/agents/`
+- Removes stale symlinks for skills deleted from the repo on each platform.
 - Safe to re-run anytime — idempotent.
 
 ## Adding a new skill to the repo
 
-1. Create a folder at the root of `b-agent-skills/`: `mkdir my-skill`
-2. Add `my-skill/SKILL.md` with proper frontmatter
+1. Create `claude/b-new-skill/SKILL.md` with proper frontmatter
+2. Create `opencode/b-new-skill.md` as the paired OpenCode agent file
 3. Commit and push
 4. Run `~/.b-agent-skills/sync.sh` on any machine to pick it up
 
@@ -109,6 +100,7 @@ Use the Bash tool to run the appropriate command based on Step 1:
 - **BOOTSTRAP**: `git clone https://github.com/dhoaibao/b-agent-skills.git ~/.b-agent-skills && bash ~/.b-agent-skills/sync.sh`
 - **UPDATE**: `bash ~/.b-agent-skills/sync.sh`
 
+The script will prompt for platform selection (1=Claude Code, 2=OpenCode, 3=Both). Default is Both.
 Output the script's stdout — it contains live progress messages (🔄 Updating, 🔗 Syncing, ✅ per skill).
 
 If sync.sh exits with error: check the output message.
