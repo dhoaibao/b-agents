@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# sync.sh — Bootstrap or update b-agent-skills on any machine
+# install.sh — Bootstrap or update b-agent-skills on any machine
 # Usage:
-#   First time : git clone https://github.com/dhoaibao/b-agent-skills.git ~/.b-agent-skills && bash ~/.b-agent-skills/sync.sh
-#   Update     : bash ~/.b-agent-skills/sync.sh
+#   First time : curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agent-skills/main/install.sh | bash
+#   Update     : curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agent-skills/main/install.sh | bash
 
 set -euo pipefail
 
@@ -13,6 +13,7 @@ CLAUDE_SKILLS_DST="$HOME/.claude/skills"
 OPENCODE_AGENTS_SRC="$LOCAL_REPO/opencode"
 OPENCODE_AGENTS_DST="$HOME/.config/opencode/agents"
 HDCODE_AGENTS_DST="$HOME/.config/hdcode/agents"
+GLOBAL_AGENTS_DST="$HOME/.agents"
 
 # ── 1. Clone or update the repo ──────────────────────────────────────────────
 if [ -d "$LOCAL_REPO/.git" ]; then
@@ -37,8 +38,12 @@ echo "  2) OpenCode"
 echo "  3) HDCode"
 echo "  4) All"
 echo ""
-read -rp "Enter choice [1/2/3/4] (default: 4): " platform_choice </dev/tty
-platform_choice="${platform_choice:-4}"
+if [ -t 0 ] && [ -z "${B_AGENT_PLATFORM:-}" ]; then
+  read -rp "Enter choice [1/2/3/4] (default: 4): " platform_choice </dev/tty
+  platform_choice="${platform_choice:-4}"
+else
+  platform_choice="${B_AGENT_PLATFORM:-4}"
+fi
 
 case "$platform_choice" in
   1) sync_claude=true;  sync_opencode=false; sync_hdcode=false ;;
@@ -105,11 +110,13 @@ if [ "$sync_opencode" = true ]; then
       fi
     done
 
-    # Symlink each agent file
+    # Symlink each agent file (skip AGENTS.md — handled as global rules)
     echo "🔗 Syncing OpenCode agents..."
     for agent_file in "$OPENCODE_AGENTS_SRC"/*.md; do
       [ -f "$agent_file" ] || continue
       agent_name=$(basename "$agent_file")
+      [ "$agent_name" = "AGENTS.md" ] && continue
+
       target="$OPENCODE_AGENTS_DST/$agent_name"
 
       if [ -L "$target" ] || [ -f "$target" ]; then
@@ -143,11 +150,13 @@ if [ "$sync_hdcode" = true ]; then
       fi
     done
 
-    # Symlink each agent file from opencode/ source
+    # Symlink each agent file from opencode/ source (skip AGENTS.md)
     echo "🔗 Syncing HDCode agents..."
     for agent_file in "$OPENCODE_AGENTS_SRC"/*.md; do
       [ -f "$agent_file" ] || continue
       agent_name=$(basename "$agent_file")
+      [ "$agent_name" = "AGENTS.md" ] && continue
+
       target="$HDCODE_AGENTS_DST/$agent_name"
 
       if [ -L "$target" ] || [ -f "$target" ]; then
@@ -163,4 +172,18 @@ if [ "$sync_hdcode" = true ]; then
   else
     echo "ℹ️  No opencode/ folder found — skipping HDCode agent sync"
   fi
+fi
+
+# ── 6. Sync global AGENTS.md (OpenCode global rules) ─────────────────────────
+GLOBAL_AGENTS_FILE="$OPENCODE_AGENTS_SRC/AGENTS.md"
+if [ -f "$GLOBAL_AGENTS_FILE" ]; then
+  mkdir -p "$GLOBAL_AGENTS_DST"
+  target="$GLOBAL_AGENTS_DST/AGENTS.md"
+
+  if [ -L "$target" ] || [ -f "$target" ]; then
+    rm "$target"
+  fi
+
+  ln -s "$GLOBAL_AGENTS_FILE" "$target"
+  echo "🔗 Global AGENTS.md → $target"
 fi

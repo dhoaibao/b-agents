@@ -1,6 +1,6 @@
 ---
 name: b-observe
-description: Static observability audit — find missing log statements, swallowed errors, missing
+description: Static observability audit — find missing log statements, swallowed errors, missing metrics, and absent tracing in source code.
 mode: subagent
 model: github-copilot/gpt-5.3-codex
 ---

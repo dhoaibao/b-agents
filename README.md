@@ -8,11 +8,9 @@ A personal skill suite for **Claude Code** and **OpenCode**.
 curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agent-skills/main/install.sh | bash
 ```
 
-Or if already cloned locally:
+Then **restart Claude Code or OpenCode** to load the skills.
 
-```bash
-bash ~/.b-agent-skills/install.sh
-```
+> **To update skills later**: run `/b-sync` in Claude Code (or `@b-sync` in OpenCode), then restart Claude Code / OpenCode.
 
 ---
 
@@ -20,7 +18,7 @@ bash ~/.b-agent-skills/install.sh
 
 Skills are organized into two groups:
 
-- **Development skills** — a tightly integrated pipeline: `b-plan → b-tdd → b-gate → b-review → b-commit`, with `b-analyze`, `b-debug`, `b-docs`, and `b-research` as supporting tools. `b-execute-plan` orchestrates the full pipeline.
+- **Development skills** — a tightly integrated pipeline: `b-plan → b-tdd → b-gate → b-review → b-commit`, with `b-analyze`, `b-debug`, `b-docs`, `b-research`, and `b-observe` as supporting tools. `b-execute-plan` orchestrates the full pipeline.
 - **Personal / daily skills** — standalone utilities: `b-quick-search`, `b-news`, `b-sync`.
 
 **Hybrid workflow**: Claude Code handles planning (`b-plan`), OpenCode handles execution (`b-execute-plan`). Plan files in `.claude/b-plans/*.md` are the shared contract.

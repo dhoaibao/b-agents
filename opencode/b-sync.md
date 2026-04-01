@@ -23,7 +23,7 @@ When instructions reference these Claude Code tools, use the OpenCode equivalent
 
 # b-sync
 
-Syncs Claude Code skills and/or OpenCode agents from the public `b-agent-skills` GitHub repo using git + HTTPS. No extra tools required — just `git`.
+Syncs Claude Code skills and/or OpenCode agents from the public `b-agent-skills` GitHub repo using `curl` + `install.sh`. No extra tools required — just `curl` and `bash`.
 
 ## When to use
 
@@ -44,42 +44,46 @@ Syncs Claude Code skills and/or OpenCode agents from the public `b-agent-skills`
 - `opencode/b-[name].md` — OpenCode agent files (source)
 - `~/.claude/skills/<skill-name>` — symlinks to Claude Code skills
 - `~/.config/opencode/agents/<skill-name>.md` — symlinks to OpenCode agents
-- Updating = `git pull` → symlinks stay valid automatically.
+- Updating = run `install.sh` via `curl` → re-clones or pulls and re-symlinks automatically.
 - Stale symlinks (skills removed from repo) are cleaned up automatically on each sync.
-- `sync.sh` prompts which platform to sync: Claude Code, OpenCode, or both.
+- `install.sh` handles both bootstrap and update in one command.
 
 ## Tools required
 
-- `Bash` tool — to run `git` and `sync.sh` commands (built-in, always available)
+- `Bash` tool — to run `curl` and `install.sh` commands (built-in, always available)
 
-Graceful degradation: ✅ Possible — b-sync requires only Bash/git and does not depend on MCP servers.
+Graceful degradation: ✅ Possible — b-sync requires only Bash/curl and does not depend on MCP servers.
 
 ## Commands
 
-### Bootstrap a new machine (first time only)
+### Bootstrap a new machine (first time only) or update skills
 
 ```bash
-git clone https://github.com/dhoaibao/b-agent-skills.git ~/.b-agent-skills && bash ~/.b-agent-skills/sync.sh
+curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agent-skills/main/install.sh | bash
 ```
+
+This single command handles both first-time setup and updates. After running, **restart Claude Code or OpenCode** to pick up new skills.
 
 If you have forked this repo, replace the URL above with your own fork's HTTPS URL.
 
 ### Sync / update skills (everyday use)
 
+Run `/b-sync` in Claude Code or `@b-sync` in OpenCode — then **restart Claude Code / OpenCode** to load the updated skills.
+
+Or run directly:
+
 ```bash
-bash ~/.b-agent-skills/sync.sh
+curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agent-skills/main/install.sh | bash
 ```
 
 This will:
-1. `git pull` the latest changes from the repo
-2. Prompt which platform to sync (Claude Code / OpenCode / both)
-3. Re-symlink any new skill/agent files into the appropriate destination
-4. Remove symlinks for skills that no longer exist in the repo
+1. Pull latest changes (or clone if not yet installed)
+2. Re-symlink any new skill/agent files into the appropriate destination
+3. Remove symlinks for skills that no longer exist in the repo
 
-## What sync.sh does (for reference)
+## What install.sh does (for reference)
 
-- Pulls latest from `main`
-- Asks: sync Claude Code, OpenCode, or both?
+- Clones or pulls latest from `main`
 - **Claude Code**: scans `claude/b-[name]/` folders; symlinks those with `SKILL.md` into `~/.claude/skills/`
 - **OpenCode**: scans `opencode/b-[name].md` files; symlinks them into `~/.config/opencode/agents/`
 - Removes stale symlinks for skills deleted from the repo on each platform.
@@ -90,7 +94,7 @@ This will:
 1. Create `claude/b-new-skill/SKILL.md` with proper frontmatter
 2. Create `opencode/b-new-skill.md` as the paired OpenCode agent file
 3. Commit and push
-4. Run `~/.b-agent-skills/sync.sh` on any machine to pick it up
+4. Run `/b-sync` (or `curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agent-skills/main/install.sh | bash`) then restart Claude Code / OpenCode to pick it up
 
 ## Steps
 
@@ -109,15 +113,18 @@ Save this output as the "before" skill list — used in Step 5 to diff what chan
 
 ### Step 3 — Run sync
 
-Use the Bash tool to run the appropriate command based on Step 1:
+Use the Bash tool to run:
 
-- **BOOTSTRAP**: `git clone https://github.com/dhoaibao/b-agent-skills.git ~/.b-agent-skills && bash ~/.b-agent-skills/sync.sh`
-- **UPDATE**: `bash ~/.b-agent-skills/sync.sh`
+```bash
+curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agent-skills/main/install.sh | bash
+```
 
-The script will prompt for platform selection (1=Claude Code, 2=OpenCode, 3=Both). Default is Both.
+This handles both BOOTSTRAP and UPDATE automatically — no branching needed.
 Output the script's stdout — it contains live progress messages (🔄 Updating, 🔗 Syncing, ✅ per skill).
 
-If sync.sh exits with error: check the output message.
+After sync completes, tell the user: **"Restart Claude Code or OpenCode to load the updated skills."**
+
+If install.sh exits with error: check the output message.
 - If "⚠️ Local changes detected" → tell the user to run `cd ~/.b-agent-skills && git stash` first, then retry sync.
 - If `git pull` fails with "not possible to fast-forward" → tell the user their local clone has diverged and suggest `git -C ~/.b-agent-skills reset --hard origin/main` (ask for confirmation first, as this discards local changes).
 
@@ -154,7 +161,7 @@ Print summary:
 
 ## Verify after sync
 
-After running `sync.sh`, verify installed skills are valid:
+After running `install.sh`, verify installed skills are valid:
 
 ```bash
 grep -rL 'name:' ~/.claude/skills/*/SKILL.md 2>/dev/null
@@ -168,7 +175,7 @@ Any file printed by this command is missing the `name:` frontmatter field — ch
 |---|---|
 | `Permission denied` | Check your network or GitHub token if repo requires auth |
 | Skill not showing in Claude Code | Check folder has `SKILL.md` with valid `name` + `description` frontmatter |
-| Symlink broken | Re-run `sync.sh` to refresh |
+| Symlink broken | Re-run `install.sh` via curl to refresh |
 
 ---
 
@@ -188,5 +195,5 @@ If bootstrap mode, prefix with: `🆕 Bootstrapped b-skills on this machine.`
 
 - Always snapshot the before-state (Step 2) so the report can show what changed.
 - Never modify skill files during sync — b-sync only installs, it does not edit.
-- If `sync.sh` fails, diagnose the error — do not retry blindly.
+- If `install.sh` fails, diagnose the error — do not retry blindly.
 - Always verify symlinks after sync (Step 4) before reporting success.

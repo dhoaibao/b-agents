@@ -126,16 +126,22 @@ Intentional differences to preserve in `b-execute-plan` agent file:
 - State bridging block: writes context to plan file before each subagent call (`## Context`, `## Last Gate Failure`, `## Review Feedback`)
 - `Skill invocation format` table uses `@b-[name]` syntax throughout
 
-**Delete** — when a skill is deleted from the repo, delete its agent file in the same commit. `sync.sh` will clean up the symlink on next run, but the source file must be removed manually.
+**Delete** — when a skill is deleted from the repo, delete its agent file in the same commit.
 
-**`AGENTS.md` sync** — update `AGENTS.md` in the same commit when any of these change:
+**`opencode/AGENTS.md` sync** — update `opencode/AGENTS.md` (global rules) and `AGENTS.md` (repo rules) in the same commit when any of these change:
 
-| Change | `AGENTS.md` section to update |
+| Change | Section to update |
 |---|---|
-| Subagent added or removed | `## Subagents` table |
-| New plan file section added (e.g. `## Context`, `## Last Gate Failure`) | `## Plan file state sections` table |
-| b-execute-plan workflow changes (how pipeline is invoked) | `## Invoking the execution pipeline` |
-| Git safety rules change | `## Git safety` |
+| Subagent added or removed | `## Subagents` table in `opencode/AGENTS.md` |
+| New plan file section added | `## Plan file state sections` table in `opencode/AGENTS.md` |
+| b-execute-plan workflow changes | `## Invoking the execution pipeline` in `opencode/AGENTS.md` |
+| Git safety rules change | `## Git safety` in `opencode/AGENTS.md` |
+
+**`CLAUDE.md` ↔ `AGENTS.md` mirror rule** — `AGENTS.md` (repo root) and `CLAUDE.md` (repo root) must always stay in sync:
+
+- Any change to authoring conventions, structure templates, MCP rules, doc sync rules, quality checklist, or new skill creation guide in `CLAUDE.md` must be mirrored to `AGENTS.md` in the same commit.
+- Any equivalent change made to `AGENTS.md` must also be applied to `CLAUDE.md` in the same commit.
+- These two files must be identical — no intentional differences are allowed.
 
 **Agent file structure** — every `opencode/b-[name].md` follows this format:
 
@@ -161,7 +167,7 @@ The **Tool Mapping preamble is fixed** — never modify it when updating agent f
 
 **How to add a new paired skill**:
 1. Create `opencode/b-[name].md` with the structure above.
-2. `sync.sh` picks it up automatically — no script changes needed.
+2. `install.sh` picks it up automatically — no script changes needed.
 3. Update `OPENCODE.md` model assignments table if the new skill uses a non-default model.
 
 ---
@@ -202,11 +208,13 @@ b-agent-skills/
 │   └── b-new-skill/
 │       └── SKILL.md      ← Claude Code skill file
 ├── opencode/
+│   ├── AGENTS.md         ← Global OpenCode rules (symlinked to ~/.agents/AGENTS.md)
 │   └── b-new-skill.md    ← OpenCode agent file
-├── sync.sh
+├── install.sh
 ├── README.md
 ├── REFERENCE.md
-└── CLAUDE.md
+├── AGENTS.md             ← Repo-level OpenCode rules
+└── CLAUDE.md             ← Repo-level Claude Code rules
 ```
 
 ### Naming convention
@@ -219,10 +227,10 @@ b-agent-skills/
 
 1. Create `claude/b-new-skill/SKILL.md` with valid frontmatter (`name` + `description`)
 2. Create `opencode/b-new-skill.md` as the paired OpenCode agent file
-3. `sync.sh` picks up both automatically — no script changes needed
+3. `install.sh` picks up both automatically — no script changes needed
 4. Update `README.md` skills overview table
 5. Update `REFERENCE.md` with a detailed reference section
-6. Commit, push, run `sync.sh` on target machines
+6. Commit, push, run `/b-sync` then restart Claude Code / OpenCode
 
 ### How to add a new MCP to the suite
 
