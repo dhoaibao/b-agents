@@ -44,18 +44,18 @@ Verify all 5 are connected in OpenCode.
 | Agent | OpenCode model |
 |---|---|
 | `b-analyze` | `hdwebsoft/gpt-5.4` |
-| `b-commit` | `github-copilot/claude-haiku-4-5` |
-| `b-debug` | `hdwebsoft/gpt-5.4` |
+| `b-commit` | `github-copilot/gpt-5-mini` |
+| `b-debug` | `github-copilot/gpt-5.3-codex` |
 | `b-docs` | `hdwebsoft/gpt-5.4` |
-| `b-execute-plan` | `hdwebsoft/claude-sonnet-4-6` |
-| `b-gate` | `hdwebsoft/gpt-5.4` |
-| `b-news` | `github-copilot/claude-haiku-4-5` |
+| `b-execute-plan` | `hdwebsoft/gpt-5.4` |
+| `b-gate` | `github-copilot/gpt-5.3-codex` |
+| `b-news` | `github-copilot/gpt-5-mini` |
 | `b-observe` | `hdwebsoft/gpt-5.4` |
-| `b-plan` | `hdwebsoft/claude-sonnet-4-6` |
-| `b-quick-search` | `github-copilot/claude-haiku-4-5` |
+| `b-plan` | `hdwebsoft/gpt-5.4` |
+| `b-quick-search` | `github-copilot/gpt-5-mini` |
 | `b-research` | `hdwebsoft/gpt-5.4` |
-| `b-review` | `hdwebsoft/gpt-5.4` |
-| `b-tdd` | `hdwebsoft/gpt-5.4` |
+| `b-review` | `github-copilot/gpt-5.3-codex` |
+| `b-tdd` | `github-copilot/gpt-5.3-codex` |
 
 ---
 
