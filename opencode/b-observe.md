@@ -2,7 +2,7 @@
 name: b-observe
 description: Static observability audit — find missing log statements, swallowed errors, missing metrics, and absent tracing in source code.
 mode: subagent
-model: github-copilot/claude-haiku-4.5
+model: hdwebsoft/claude-haiku-4.5
 ---
 
 

@@ -2,7 +2,7 @@
 name: b-news
 description: Aggregate and summarize today's news from any domain into a grouped digest.
 mode: subagent
-model: github-copilot/gpt-5-mini
+model: hdwebsoft/claude-haiku-4.5
 ---
 
 
