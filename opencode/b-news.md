@@ -2,7 +2,7 @@
 name: b-news
 description: Aggregate and summarize today's news from any domain into a grouped digest.
 mode: subagent
-model: hdwebsoft/claude-haiku-4.5
+model: hdwebsoft/claude-haiku-4-5-20251001
 ---
 
 

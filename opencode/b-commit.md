@@ -2,7 +2,7 @@
 name: b-commit
 description: Generate commit message and PR description text — nothing more. Use when user says "commit", "tạo commit", "viết commit message", "PR description", or after b-review passes.
 mode: subagent
-model: hdwebsoft/claude-haiku-4.5
+model: hdwebsoft/claude-haiku-4-5-20251001
 ---
 
 

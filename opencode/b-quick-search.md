@@ -2,7 +2,7 @@
 name: b-quick-search
 description: Fast, single-call web lookup via Brave Search — no scraping, no deep synthesis.
 mode: subagent
-model: hdwebsoft/claude-haiku-4.5
+model: hdwebsoft/claude-haiku-4-5-20251001
 ---
 
 
