@@ -86,7 +86,7 @@ When deciding which MCPs an agent should use:
 
 | Role | When to add | Example |
 |---|---|---|
-| **Primary** | Agent cannot function without it | brave-search for b-quick-search |
+| **Primary** | Agent cannot function without it | context7 for b-docs |
 | **Secondary** | Agent uses it conditionally for a specific step | context7 for b-research (HOWTO queries only) |
 | **Optional** | Enhances quality but agent works without it | sequential-thinking for b-analyze |
 

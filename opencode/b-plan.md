@@ -24,7 +24,7 @@ implementation begins.
 
 - Simple single-file edit or ≤2-step task → do it directly.
 - Something is broken and needs debugging → use **b-debug**.
-- Quick fact lookup or library API question → use **b-quick-search** or **b-docs**.
+- Quick fact lookup → call `brave_web_search` or `brave_news_search` directly; library API question → use **b-docs**.
 
 ## Tools required
 

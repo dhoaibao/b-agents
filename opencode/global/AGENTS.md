@@ -43,13 +43,7 @@ All agents are available as subagents:
 | `@b-plan` | Decompose tasks into ordered steps before coding |
 | `@b-docs` | Fetch live library documentation via Context7 |
 | `@b-research` | Deep research — search + scrape + synthesize report |
-| `@b-quick-search` | Fast single-call web lookup |
 | `@b-observe` | Static observability audit — missing logs, swallowed errors |
-
-### Utilities
-| Agent | Role |
-|---|---|
-| `@b-news` | Daily news digest on any topic |
 
 Invoke directly for one-off tasks:
 ```

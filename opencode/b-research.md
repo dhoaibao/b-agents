@@ -22,9 +22,9 @@ citations and freshness indicators.
 
 ## When NOT to use
 
-- Quick one-fact lookup (latest version, price, single answer) → use **b-quick-search**
+- Quick one-fact lookup (latest version, price, single answer) → call `brave_web_search` or `brave_news_search` directly
 - Library/framework API details or method signatures → use **b-docs**
-- Daily news digest → use **b-news**
+- Daily news digest → call `brave_news_search` directly and format a digest
 
 ## Tools required
 

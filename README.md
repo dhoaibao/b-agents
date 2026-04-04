@@ -16,10 +16,11 @@ Then **restart OpenCode** to load the agents.
 
 ## Overview
 
-Agents are organized into two groups:
+Agents are organized into one integrated development suite:
 
 - **Development agents** — a tightly integrated pipeline: `b-plan → b-tdd → b-gate → b-review → b-commit`, with `b-analyze`, `b-debug`, `b-docs`, `b-research`, and `b-observe` as supporting tools. `b-execute-plan` orchestrates the full pipeline.
-- **Personal / daily agents** — standalone utilities: `b-quick-search`, `b-news`.
+
+Quick lookups and news requests should call `brave_web_search` / `brave_news_search` directly instead of routing through separate utility agents.
 
 **Execution guardrail**: in `b-execute-plan`, greenfield plans auto-skip pre-execution analysis, but plans that modify existing code always ask whether to run `b-analyze` first. Existing `## Context` is reused only when it still matches the current plan scope.
 

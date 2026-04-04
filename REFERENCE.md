@@ -566,9 +566,6 @@ b-research ── news query ─────────────────
            ── deep multi-page docs ────────► firecrawl_crawl + check_crawl_status (async)
            ── sources conflict ───────────► sequential-thinking (structured conflict resolution, optional)
 
-b-quick-search ── news/current-events ────► brave_news_search (freshness: pd/pw)
-               ── general lookup ─────────► brave_web_search
-
 ```
 
 ---
@@ -576,71 +573,3 @@ b-quick-search ── news/current-events ────► brave_news_search (fre
 ---
 
 ## Personal / daily agent reference
-
-### b-quick-search
-
-Single-call web lookup via Brave Search. Returns a fast, cited answer from the live
-web — no scraping, no deep synthesis. Routes to `brave_news_search` for news/current-events
-queries, `brave_web_search` for everything else.
-
-**Good triggers:**
-```
-b-quick-search: latest version of Node.js
-what's the current price of M4 MacBook Pro?
-latest release of Fedora?
-recent CVE for OpenSSL?
-latest news about OpenAI?
-```
-
-**Output:** Direct answer with source citations. Multi-point queries get a short "Key findings" list.
-
-**Query routing:** News/current-events → `brave_news_search` (`freshness: "pd"/"pw"`). Versions, prices, docs, CVEs → `brave_web_search`.
-
-**Distinction from b-research:** If one search can answer it → b-quick-search.
-If you need to read multiple full pages → b-research.
-
-**Fallback:** If results are insufficient, says so and suggests b-research.
-
----
-
-### b-news
-
-Aggregates today's top news on any user-specified topic from a domain-matched trusted
-source map. Parses user input to extract topics, maps them to authoritative sources
-(e.g., finance → reuters/bloomberg/ft, security → bleepingcomputer/krebsonsecurity,
-science → nature/sciencedaily), generates 3–5 focused queries, runs them in parallel
-via `brave_news_search` with `freshness: "pd"`, then groups results into dynamic
-categories derived from the actual topics found. Falls back to `freshness: "pw"` if
-fewer than 10 stories are returned. Outputs a bilingual digest (English + Vietnamese)
-when the query is in Vietnamese.
-
-**Good triggers:**
-```
-b-news
-b-news AI crypto
-b-news tài chính thị trường
-b-news khoa học vũ trụ
-b-news chính trị thế giới
-tin tức hôm nay
-có gì mới hôm nay?
-điểm tin
-```
-
-**No topic specified:** Defaults to tech news (backward compatible with all existing triggers).
-
-**Output:** Grouped digest with dynamically derived categories (emoji + label per sub-topic).
-Each story has an English headline + summary + source link, with Vietnamese translation
-when the query is in Vietnamese. Header reflects the actual topic(s), not a generic "Tech News" label.
-Max 3 stories per category. Footer lists the actual source domains used.
-
-**Source map:** 12 domain tiers — Universal (reuters, apnews, bbc), Tech, AI/ML,
-Security, Mobile, Linux, Finance, Crypto, Science, Health, Politics, Startups.
-Queries are matched to the relevant tiers; Universal sources are always included as fallback.
-
-**On-demand detail:** Follow up with "đọc thêm về [story]" / "tell me more about [story]"
-to scrape the full article via `firecrawl_scrape`. Not called during initial digest generation.
-
-**Distinction from b-research:** b-news gives a fast, grouped digest of today's headlines.
-Use b-research when you need deep synthesis, comparison, or a multi-source report on a topic.
-
----

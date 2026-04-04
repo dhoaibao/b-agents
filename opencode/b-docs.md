@@ -27,7 +27,7 @@ If `$ARGUMENTS` is provided, parse it as `[library] [topic]` (e.g. `sendgrid sen
 
 - User wants a deep comparison or multi-source report → use **b-research**
 - User is debugging a broken library call → use **b-debug**
-- User wants general news or current events → use **b-quick-search** or **b-news**
+- User wants general news or current events → call `brave_web_search` or `brave_news_search` directly
 
 ## Tools required
 
