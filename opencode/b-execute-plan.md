@@ -50,13 +50,11 @@ Graceful degradation: ✅ Possible — core pipeline always works.
 
 #### Step 0 — Pre-execution analysis *(conditional)*
 
-**Skip immediately** if any of these is true:
+**Skip immediately** if either is true:
 - Plan is greenfield (no existing modules are changed)
-- `## Context` section already exists in the plan file
-- Fewer than 3 pending implementation steps remain
-- Fewer than 2 distinct file paths or module names found in `## Steps`
+- `## Context` section already exists in the plan file and is still valid for the current plan scope
 
-**Proceed only if all four conditions are met**.
+**If the plan modifies existing code, always ask before execution** whether to run pre-execution analysis. Never auto-invoke `@b-analyze`.
 
 **Determine scope before asking:**
 1. Scan `## Steps` for explicit file paths or backtick module names.
@@ -64,6 +62,8 @@ Graceful degradation: ✅ Possible — core pipeline always works.
 3. If not → parse the plan's **Scope** for module/layer names.
 4. If the repo can be resolved with jcodemunch, use `resolve_repo` as a cached repo map lookup and call `get_ranked_context` with the plan title + scope as the query. Use the top-ranked files/symbols to refine the analysis scope.
 5. If still ambiguous → ask: "Which module or directory should I analyze?"
+
+If the existing `## Context` appears stale, incomplete, or mismatched to the current plan scope, treat it as missing and ask whether to refresh it.
 
 **Ask before running** (never auto-invoke):
 ```
