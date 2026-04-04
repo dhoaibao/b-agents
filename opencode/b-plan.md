@@ -28,14 +28,14 @@ implementation begins.
 
 ## Tools required
 
-- `sequentialthinking` — from `sequential-thinking` MCP server (required for Step 2 decomposition).
-- `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_repo_outline`, `get_file_outline`, `get_file_tree`, `index_file` — from `jcodemunch` MCP server *(optional, for modify-existing-code tasks)*.
+- `sequentialthinking` — from `sequential-thinking` MCP server (required for Step 2 decomposition and trade-off decisions).
+- `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_repo_outline`, `get_file_outline`, `get_file_tree`, `get_blast_radius`, `check_rename_safe`, `index_file` — from `jcodemunch` MCP server *(required for modify-existing-code tasks; optional for pure greenfield work)*.
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for inline library verification in Step 3 — simple lookups only; delegate complex research to b-docs)*.
 - `brave_web_search` — from `brave-search` MCP server *(optional, for tool/approach comparison in Step 3 — simple lookups only; delegate multi-source research to b-research)*.
 
 If sequential-thinking is unavailable: reason through the plan inline step by step,
 making the thinking explicit in the response. Do not skip planning — just do it without the tool.
-If jcodemunch is unavailable, or `index_folder` returns `file_count = 0`: use Glob/Read to inspect key files manually before Step 2.
+If jcodemunch is unavailable, or `index_folder` returns `file_count = 0`: use Glob/Read to inspect key files manually before Step 2 and explicitly note that blast-radius / rename-safety checks were skipped.
 If context7 is unavailable: delegate library verification to b-docs as before.
 If brave-search is unavailable: delegate tool comparison to b-research as before.
 
@@ -130,6 +130,11 @@ Use `sequential-thinking` to create atomic steps:
 - State the 2–3 viable approaches and the key trade-offs (complexity, performance, coupling).
 - Pick one and document the reason.
 - Do not leave architecture decisions implicit inside a step description.
+
+**Impact checkpoint for modify-existing-code tasks** — before finalizing the step order:
+- Use `get_blast_radius` on the main symbol/module being changed when the plan alters an existing public function, service boundary, or shared module.
+- Use `check_rename_safe` before proposing any rename step for an exported/public symbol.
+- If either call reveals wide downstream impact, split the plan into smaller phases or add explicit rollback / verification steps.
 
 **Deploy safety checkpoint** — after decomposing steps, scan the plan for the following patterns and annotate accordingly:
 

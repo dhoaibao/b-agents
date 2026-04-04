@@ -12,8 +12,8 @@ Decomposes non-trivial tasks into ordered steps, dependencies, and risks before
 implementation. Includes a conditional **feasibility gate (Step 0)** for uncertain scope
 to confirm Understanding Lock, blockers, and effort. Uses `sequential-thinking` for
 decomposition and unknown/risk surfacing. For modify-existing-code tasks, scans with
-`jcodemunch` using a shared preflight: cached repo lookup via `resolve_repo` → entrypoint discovery via `suggest_queries` → bounded relevant context via `get_ranked_context`, then `get_repo_outline` / `get_file_outline` batch (optional `get_file_tree`) so plans reference real paths/symbols and follow existing patterns.
-Includes an explicit **architecture trade-off checkpoint**, a **deploy safety checkpoint** (new routes/endpoints/UI → suggest feature flag; DB schema changes → document migration ordering — additive before deploy, destructive after; new external service calls/queues → flag availability verification), and a plan-file handoff for execution in a fresh session. Deploy safety findings are appended to the plan's `## Risks` section.
+`jcodemunch` using a shared preflight: cached repo lookup via `resolve_repo` → index health check via `get_repo_outline` (re-index if coverage is implausibly low) → entrypoint discovery via `suggest_queries` → bounded relevant context via `get_ranked_context`, then `get_repo_outline` / `get_file_outline` batch (optional `get_file_tree`) so plans reference real paths/symbols and follow existing patterns.
+Includes an explicit **architecture trade-off checkpoint**, an **impact checkpoint** for modify-existing-code tasks (`get_blast_radius` for shared/public symbols; `check_rename_safe` before rename steps), a **deploy safety checkpoint** (new routes/endpoints/UI → suggest feature flag; DB schema changes → document migration ordering — additive before deploy, destructive after; new external service calls/queues → flag availability verification), and a plan-file handoff for execution in a fresh session. Deploy safety findings are appended to the plan's `## Risks` section.
 
 **Good triggers:**
 ```
@@ -122,6 +122,8 @@ does zod support async validation?
 tra cứu cách dùng thư viện Prisma
 hướng dẫn sử dụng Zod
 ```
+
+**Version detection:** When the current project is indexed, b-docs uses jcodemunch (`get_file_tree` + `get_file_content`) to inspect manifests/lockfiles before falling back to native file tools. This keeps manifest discovery aligned with the MCP-first rule.
 
 **Output:** Accurate method signatures, required parameters, auth setup, error codes,
 and deprecation notices for the current version. Routes to implementation or lookup-only
@@ -239,9 +241,9 @@ Pre-PR human-judgment review on changed code. Reads the git diff, establishes re
 baseline from the plan file (`.opencode/b-plans/`) or `$ARGUMENTS`, then checks five
 dimensions: logic correctness (control flow, null handling, async safety, side effects, plus **security review** — auth/authz enforcement, input validation, sensitive data exposure, injection vectors, rate limiting on new public endpoints), requirements coverage (maps each requirement to changed code — ✅/❌/⚠️ Partial), test adequacy (behavior coverage, unhappy paths, regression safety), and an **observability check** on new handlers/endpoints/jobs (entry-point logging present, errors not swallowed, metric emitted if implied). Uses
 `sequentialthinking` to consolidate findings and surface what a senior engineer would
-flag. Does not run automated tooling — that is b-gate's role.
+flag. Uses `sequential-thinking` as a required consolidation step and does not run automated tooling — that is b-gate's role.
 
-**Impact-aware context selection:** If the repo is locally indexed, b-review uses jcodemunch preflight (`resolve_repo` → `suggest_queries` → `get_ranked_context`) and then `get_changed_symbols` + `get_blast_radius` to prioritize review depth on high-impact symbols rather than relying only on raw diff size.
+**Impact-aware context selection:** If the repo is locally indexed, b-review uses jcodemunch preflight (`resolve_repo` → `get_repo_outline` health check → `suggest_queries` → `get_ranked_context`) and then `get_changed_symbols` + `get_blast_radius` + `get_impact_preview` to prioritize review depth on high-impact symbols rather than relying only on raw diff size.
 
 **Small-change fast path:** If diff is ≤50 lines AND ≤2 files, accepts any non-empty requirements baseline (one sentence is sufficient), skips the vague-response enforcement loop, and skips both the security review sub-section and the observability check. Full enforcement applies for diffs >50 lines or >2 files.
 
@@ -306,13 +308,13 @@ On mixed-concern diffs: stops and outputs 2 separate commit message suggestions 
 Deep code analysis using jcodemunch — maps structure, measures complexity, identifies
 duplicate logic, dead code, and OOP issues; produces severity-ranked findings with
 concrete suggestions. Resolves or indexes the codebase first via `resolve_repo` →
-`index_folder` (if needed), then runs a shared preflight: `suggest_queries` for entrypoint discovery and `get_ranked_context` for bounded relevant context, followed by `get_repo_outline` →
+`index_folder` (if needed), then runs a shared preflight: `get_repo_health` for repo-level triage, `suggest_queries` for entrypoint discovery and `get_ranked_context` for bounded relevant context, followed by `get_repo_outline` →
 `get_file_outline` (batch) → `get_dependency_graph` → `search_symbols`. For symbol
 inspection: `get_symbol_source` (single or batch via `symbol_ids[]`). For dead code:
 `check_references` + `find_importers`. For OOP: `get_class_hierarchy`. For pattern
-similarity: `get_related_symbols`. For magic numbers/hardcoded strings: `search_text`.
+similarity: `get_related_symbols`. For complexity confirmation: `get_symbol_complexity`. For hotspot prioritization: `get_hotspots`. For magic numbers/hardcoded strings: `search_text`.
 For dbt/SQL projects: `search_columns`. For High findings matching a named anti-pattern,
-calls `brave_web_search`. Uses `sequentialthinking` to produce a sprint-prioritized
+calls `brave_web_search`. Uses `sequentialthinking` in deep mode to produce a sprint-prioritized
 action list. Does not fix anything; produces findings only.
 
 **Stale index detection:** When `resolve_repo` returns an existing index, calls `get_session_stats` and compares `files_indexed` against a Glob count of source files (`**/*.{ts,tsx,js,jsx,py,go,rs,java,rb,php,kt,swift}`). If drift >10%, calls `index_folder` to re-index before proceeding. If `get_session_stats` unavailable: notes "⚠️ Could not verify index freshness" and continues.
@@ -389,9 +391,9 @@ the silence that makes future failures invisible.
 ### b-debug
 
 Systematic, hypothesis-driven bug tracing. Resolves or indexes the codebase first via
-`resolve_repo` → `index_folder` (if needed), then runs a shared preflight: `suggest_queries`
+`resolve_repo` → `index_folder` (if needed), then runs a shared preflight: `get_repo_outline` health check, `suggest_queries`
 for entrypoint discovery and `get_ranked_context` for bounded relevant context, then maps the full execution path with jcodemunch
-(`get_context_bundle` → `find_references` → `get_blast_radius` → `get_symbol_source`).
+(`get_context_bundle` → `find_references` → `get_blast_radius` → `get_impact_preview` → `get_symbol_source`).
 For suspicious functions, uses `get_related_symbols`
 to find similar patterns elsewhere. For regression detection: `get_symbol_diff`. For
 error string origin: `search_text`. Forms ranked hypotheses with sequential-thinking.

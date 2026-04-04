@@ -33,6 +33,7 @@ If `$ARGUMENTS` is provided, parse it as `[library] [topic]` (e.g. `sendgrid sen
 
 - `resolve-library-id` — from `context7` MCP server.
 - `query-docs` — from `context7` MCP server.
+- `resolve_repo`, `get_file_tree`, `get_file_content` — from `jcodemunch` MCP server *(optional, for reading project manifests/lockfiles without falling back to native file tools when the current repo is indexed)*
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, fallback when context7 has no index)*
 
 If context7 is unavailable:
@@ -46,7 +47,7 @@ Graceful degradation: ⚠️ Partial — fallback chain: context7 → firecrawl 
 
 ### Step 1 — Identify library and topic
 
-First, use `Glob` to find `package.json`, `pyproject.toml`, or `requirements.txt` in the project root. If found, read it and extract the version of the requested library. Use this version when calling `query-docs`. If the file is not found or version parsing fails (e.g. `workspace:*`, missing entry), continue without version constraint — do not block on this.
+First, if the current project can be resolved by jcodemunch, use `get_file_tree` to look for `package.json`, `pyproject.toml`, `requirements.txt`, and lockfiles in the project root, then `get_file_content` to extract the installed version of the requested library. If jcodemunch is unavailable for the current repo, fall back to `Glob` + `Read`. If the manifest is not found or version parsing fails (e.g. `workspace:*`, missing entry), continue without version constraint — do not block on this.
 
 If the extracted version contains a range operator (`^`, `~`, `>=`, `*`, or `workspace:*`), the version is imprecise. In that case, check for a lock file: read `package-lock.json` (look for `"resolved"` or `"version"` under the package name), `pnpm-lock.yaml` (look for `version:` under the package), or `yarn.lock` (look for the resolved version line). Use the exact version found in the lock file. If no lock file exists, proceed with the range version and note: `⚠️ Using version range [range] — Context7 docs may not match exact installed version.`
 

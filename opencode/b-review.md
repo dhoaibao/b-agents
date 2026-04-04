@@ -36,11 +36,11 @@ requirements baseline for Step 2.
 
 - `Bash` — to read git diff and changed file list.
 - `sequentialthinking` — from `sequential-thinking` MCP server — structured review reasoning.
-- `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_changed_symbols`, `get_blast_radius`, `get_symbol_source`, `get_context_bundle` — from `jcodemunch` MCP server *(optional, for reading full context of changed symbols, prioritizing review context, and estimating impact)*
+- `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_changed_symbols`, `get_blast_radius`, `get_impact_preview`, `get_symbol_source`, `get_context_bundle` — from `jcodemunch` MCP server *(required when the repo is locally indexed or indexable; use fallback only if jcodemunch is unavailable or indexing fails)*
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for fetching issue/ticket URL content when an `**Issue**:` URL is present in the plan file)*
 
 If sequential-thinking is unavailable: reason through review dimensions inline, document each explicitly.
-If jcodemunch is unavailable: use Read tool to inspect changed files directly.
+If jcodemunch is unavailable: use Read tool to inspect changed files directly and explicitly note that blast-radius / changed-symbol prioritization / transitive impact review were skipped.
 If firecrawl is unavailable: skip Issue URL fetch; display ticket ID or URL as a context reference only.
 
 Graceful degradation: ✅ Possible — core review works with Bash + Read. sequential-thinking improves structure of findings; jcodemunch improves symbol context; firecrawl enriches issue context. All optional.
@@ -99,7 +99,7 @@ The review is only as good as the requirements baseline. Do not review without i
 
 ### Step 3 — Logic correctness review
 
-Run the standard jcodemunch preflight (see `global/AGENTS.md § jcodemunch preflight`) with query = "[diff scope + requirements baseline summary]". Then call `get_changed_symbols` to map the diff to named symbols and `get_blast_radius` on the top changed symbols to understand downstream impact. Use the returned context as the primary review read set. If jcodemunch is unavailable, fall back to direct Read on changed files.
+Run the standard jcodemunch preflight (see `global/AGENTS.md § jcodemunch preflight`) with query = "[diff scope + requirements baseline summary]". Then call `get_changed_symbols` to map the diff to named symbols, `get_blast_radius` on the top changed symbols to understand downstream impact, and `get_impact_preview` when a changed symbol sits on a service boundary or shared helper. Use the returned context as the primary review read set. If jcodemunch is unavailable, fall back to direct Read on changed files.
 
 **Impact-first review rule**: when `get_changed_symbols` returns named symbols, prioritize review depth on (a) symbols with the largest blast radius, (b) symbols at service boundaries, and (c) symbols implementing explicit requirements from Step 2. Raw line-count alone should not determine review depth.
 

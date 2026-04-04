@@ -38,12 +38,12 @@ From `jcodemunch` MCP server:
 - `get_context_bundle` — get full context from an entry point (file or function)
 - `find_references` — trace all callers and callees of a function.
 - `get_blast_radius` — understand what depends on a suspected module.
+- `get_impact_preview` — show transitive callers that would break if the suspected symbol is wrong or removed.
 - `get_symbol_source` — inspect a specific function or class in detail (supports single `symbol_id` or batch `symbol_ids[]`)
 - `get_related_symbols` — discover functions closely associated with a suspicious symbol.
 - `get_symbol_diff` — detect regressions by diffing a symbol between two indexed states.
 - `search_text` — search for error strings or regex patterns across the codebase.
 - `index_file` — re-index a single changed file after applying a fix (keeps jcodemunch index fresh for subsequent b-analyze calls)
-- `get_session_stats` — from `jcodemunch` MCP server *(optional, for stale index detection — verify index freshness before mapping code structure)*
 
 From `sequential-thinking` MCP server:
 - `sequentialthinking` — structured reasoning to form and rank hypotheses.
@@ -87,7 +87,8 @@ Use `jcodemunch` to trace the execution path in this order:
 1. `get_context_bundle` on the chosen entry point (route handler, CLI command, event listener) — get full context of the starting point
 2. `find_references` on the relevant function — trace all callers and callees across files
 3. `get_blast_radius` on the suspected module — understand what depends on it
-4. `get_symbol_source` on any function that looks suspicious — inspect its full implementation
+4. `get_impact_preview` on the top suspected symbol when the failure may cascade through callers — this exposes the true upstream break path faster than manual tracing.
+5. `get_symbol_source` on any function that looks suspicious — inspect its full implementation
 
 From this, identify:
 - All layers the request/data passes through (middleware, validators, handlers, services, DB)

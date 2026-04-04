@@ -42,6 +42,7 @@ From `jcodemunch` MCP server:
 - `index_folder` — index a local codebase before querying.
 - `suggest_queries` — auto-surface entry points, language distribution, and key architectural symbols.
 - `get_ranked_context` — pack the most relevant symbols/files into a bounded context window before deep analysis.
+- `get_repo_health` — one-call repo triage snapshot (dead code %, dependency cycles, hotspot summary) to prioritize where to look first.
 - `get_repo_outline` — overview of all modules, files, and top-level symbols.
 - `get_file_outline` — functions, classes, and exports per file (supports batch: `file_paths=[]`)
 - `get_symbol_source` — get full source of one symbol (`symbol_id`) or many (`symbol_ids[]`); supports verify and context_lines.
@@ -51,12 +52,13 @@ From `jcodemunch` MCP server:
 - `check_references` — verify if a symbol has any live references (dead code detection)
 - `get_class_hierarchy` — map class inheritance trees for OOP codebases.
 - `get_related_symbols` — discover functions closely associated with a symbol (pattern similarity)
+- `get_symbol_complexity` — verify actual cyclomatic complexity on suspicious functions instead of estimating by eye.
+- `get_hotspots` — identify complex + high-churn code that deserves priority in the findings.
 - `search_text` — search for literal strings or regex patterns (magic numbers, hardcoded values)
 - `search_columns` — from jcodemunch MCP server *(optional, for dbt/SQL/data warehouse projects)*
-- `get_session_stats` — from `jcodemunch` MCP server *(optional, for stale index detection — verify index freshness before analysis)*
 
-From `sequential-thinking` MCP server *(optional)*:
-- `sequentialthinking` — structured prioritization of findings to produce an ordered action list.
+From `sequential-thinking` MCP server:
+- `sequentialthinking` — required in deep mode for structured prioritization of findings and ordered action list.
 
 From `brave-search` MCP server *(optional)*:
 - `brave_web_search` — look up refactoring solutions for named anti-patterns found during analysis.
@@ -88,10 +90,11 @@ Exception: if the project has fewer than 15 files, proceed with whole-project an
 Use `jcodemunch` to map the target code in this order:
 
 1. **jcodemunch preflight** — run the standard preflight (see `global/AGENTS.md § jcodemunch preflight`) with query = "code structure and quality of [target + goal from Step 1]". Use the returned repo identifier and ranked context for all subsequent calls.
-2. `get_repo_outline` — overview of all modules, files, and top-level symbols
-3. `get_file_outline` (batch: pass `file_paths=[...]` from the ranked context) — inspect each file for functions, classes, and exports; use batch mode to load multiple files in one call
-4. `get_dependency_graph` — map module coupling; look for circular deps and tight coupling
-5. `search_symbols` — find duplicate or similarly-named functions across files
+2. `get_repo_health` — capture repo-level risk signals first (hotspots, dead code %, cycle count) so deep analysis starts with the highest-leverage area.
+3. `get_repo_outline` — overview of all modules, files, and top-level symbols
+4. `get_file_outline` (batch: pass `file_paths=[...]` from the ranked context) — inspect each file for functions, classes, and exports; use batch mode to load multiple files in one call
+5. `get_dependency_graph` — map module coupling; look for circular deps and tight coupling
+6. `search_symbols` — find duplicate or similarly-named functions across files
 
 From these, extract:
 - **Call graph**: what calls what, entry points, leaf functions.
@@ -108,7 +111,7 @@ Goal: build a mental model of the code's shape before evaluating its quality.
 With the structure mapped, evaluate:
 
 **Complexity**
-- Functions or methods with high cyclomatic complexity (flag anything >10)
+- Functions or methods with high cyclomatic complexity (use `get_symbol_complexity`; flag anything >10)
 - Deeply nested conditionals or loops.
 - Long functions that do more than one thing.
 
@@ -132,6 +135,9 @@ With the structure mapped, evaluate:
 
 **Pattern similarity**
 - Use `get_related_symbols` on key functions to discover semantically similar functions across the codebase — candidates for consolidation or inconsistent implementations of the same concern.
+
+**Hotspot prioritization**
+- Use `get_hotspots` when the scope is a full repo or large module — if a symbol is both high-complexity and high-churn, prioritize it above static style findings.
 
 **Data modeling** *(dbt/SQL projects only)*
 - Use `search_columns` to audit column naming consistency, find undocumented columns, and verify column descriptions match actual usage.

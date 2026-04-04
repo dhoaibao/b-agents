@@ -100,15 +100,18 @@ When jcodemunch is connected: **never** use Glob, Grep, or Read to explore or un
 **jcodemunch preflight** — run at the start of any agent that needs to understand existing code:
 
 1. `resolve_repo(path="<absolute project root>")` — look up the cached repo map.
-   - If a repo identifier is returned: reuse it. Run stale-index check: call `get_session_stats(repo=<id>)`, count actual source files with `Glob("**/*.{ts,tsx,js,jsx,py,go,rs,java,rb,php,kt,swift}")`. If drift `> 10%`, re-index with `index_folder(path=<root>, use_ai_summaries=false)`.
+   - If a repo identifier is returned: reuse it. Verify index health with `get_repo_outline(repo=<id>)`.
+   - If the outline shows implausibly low coverage for the task (for example: `file_count = 0`, `symbol_count = 0`, only one language/file for a clearly larger repo, or the target directory/files are missing from the tree) → re-index with `index_folder(path=<root>, use_ai_summaries=false)`.
    - If no match: call `index_folder(path=<root>, use_ai_summaries=false)`. Note the `repo` identifier from the response.
-   - If `file_count = 0` or `symbol_count = 0`: jcodemunch cannot parse this codebase → fall back to Glob/Grep/Read.
+   - If re-index still returns `file_count = 0` or `symbol_count = 0`: jcodemunch cannot parse this codebase → fall back to Glob/Grep/Read.
 2. `suggest_queries(repo=<id>)` — surface entry points, key symbols, and language distribution.
 3. `get_ranked_context(repo=<id>, query="<agent-specific task query>", token_budget=4000)` — pack the most relevant symbols/files into a bounded context window.
 
 **Session reuse**: if another agent already ran this preflight in the same session, reuse the repo identifier — do not re-index.
 
 **Fallback** *(only when jcodemunch is unavailable or returns `file_count=0`)*: use `Glob` to map file structure, `Grep` for pattern search, `Read` for file inspection. Always note: "⚠️ jcodemunch unavailable — analysis based on Glob/Grep/Read; cross-file tracking incomplete."
+
+**Compliance note**: when an agent falls back from jcodemunch, it must state both (a) why fallback was necessary, and (b) which MCP capability is now missing (for example: blast radius, call graph, dead code detection, symbol diff, or ranked context).
 
 ---
 
@@ -185,6 +188,8 @@ When sequential-thinking is connected: **never** reason through a complex multi-
 | Inline trade-off comparison | `sequentialthinking` with structured criteria |
 
 **Fallback** *(only when sequential-thinking is unavailable)*: structure reasoning as an explicit numbered list with `Hypothesis N → Evidence → Confirmed/Rejected` format. Never skip structured reasoning — just do it in plain text if the MCP is down.
+
+**Compliance note**: for any task that matches the trigger table above, the agent's output must show the structured reasoning result explicitly (ranked hypotheses, ordered plan, trade-off table, or prioritized findings). Do not hide the reasoning step behind a generic summary.
 
 ---
 
