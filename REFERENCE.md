@@ -59,6 +59,8 @@ reading plan files, tracking step completion, and auto-advancing through success
 automatically, and moves to the next stage on success. Pauses only on failure, ambiguous routing,
 manual steps, NEEDS FIXES verdicts, or parallel step choices.
 
+**Model:** `hdwebsoft/gpt-5.4`
+
 **Good triggers:**
 ```
 execute plan
