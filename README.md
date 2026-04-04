@@ -59,7 +59,7 @@ Verify all 5 are connected in OpenCode.
 | `b-quick-search` | `hdwebsoft/claude-haiku-4-5-20251001` |
 | `b-research` | `hdwebsoft/gpt-5.4` |
 | `b-review` | `hdwebsoft/claude-sonnet-4-6` |
-| `b-tdd` | `github-copilot/gpt-5.3-codex` |
+| `b-tdd` | `hdwebsoft/gpt-5.3-codex` |
 
 ---
 
