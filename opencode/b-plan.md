@@ -177,13 +177,15 @@ An unresolved unknown is a risk. Surface it now, not halfway through implementat
 
 ---
 
-### Step 4 — Write plan to file
+### Step 4 — Write plan to current project root
 
-Write the plan to `.opencode/b-plans/[task-slug].md` in the **current project root** (not `~/.claude`).
+Write the plan to `.opencode/b-plans/[task-slug].md` in the **current root project only**.
 
 - `task-slug` = kebab-case of the task name, e.g. `add-retry-logic`, `refactor-auth-module`.
-- Create `.opencode/b-plans/` if it doesn't exist.
-- Show the file path to the user after writing.
+- Always resolve the active working tree / current project root first, then write under `<current-project-root>/.opencode/b-plans/`.
+- Never write plan files to the user home directory, a parent workspace folder, another repo, or any shared/global directory.
+- Create `.opencode/b-plans/` inside the current project root if it doesn't exist.
+- Show the exact saved path to the user after writing.
 
 Then present a short summary in chat (scope + step count) and ask for confirmation.
 

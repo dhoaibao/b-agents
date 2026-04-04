@@ -12,7 +12,7 @@ Every `opencode/b-[name].md` must begin with YAML frontmatter:
 ---
 name: b-agent-name
 description: >
-  [Trigger-focused description, ≤80 words. Answer ONLY: "when should Claude trigger this agent?"
+  [Trigger-focused description, ≤80 words. Answer ONLY: "when should OpenCode trigger this agent?"
   Include: ALWAYS trigger condition, key Vietnamese + English trigger phrases,
   and one sentence distinguishing this from similar agents.
   Do NOT include usage instructions — those go in the agent file body.]

@@ -24,7 +24,7 @@ where do I start with the payment gateway integration?
 ```
 
 **Output:** Plan file written to `.opencode/b-plans/[task-slug].md` in the current
-project root — with ordered steps (checkbox format), dependency map, risk flags, unknowns
+project root only (never the user home directory, a parent workspace folder, or another repo) — with ordered steps (checkbox format), dependency map, risk flags, unknowns
 marked as `b-docs` or `b-research` calls, and an optional `## Feasibility` section when
 Step 0 ran. b-analyze and b-docs findings are appended to the same file for use in
 the execution session. Two additional sections are always included for OpenCode execution:
