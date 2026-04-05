@@ -114,14 +114,14 @@ Build state map: `{step_number: {description, status: "pending" | "completed" | 
 
 **Input**: `{steps[]}`
 **Output**: `{step_N, agent_route, is_manual, is_blocked}`
-**Decisions**: dependency check; keyword routing (priority table); ambiguous route → ask once
+**Decisions**: dependency check; keyword routing (priority table); default fallback to `@b-tdd`; ask only when step text has no actionable routing signal
 
 Show:
 - Plan title and summary
 - Completed steps (✓), failed steps (❌ — show prominently), pending steps (○)
 - Next step to run
 
-**Agent routing** — match keywords in next step's description (check top-to-bottom, stop at first match):
+**Agent routing** — match keywords in next step's description (check top-to-bottom, stop at first match). If no higher-priority rule matches, default to `@b-tdd`:
 
 | Priority | Keyword(s) | Action |
 |---|---|---|
@@ -129,10 +129,11 @@ Show:
 | 2 | "run tests", "run lint", "validate quality", "quality gate", "check quality", "lint", "typecheck" | `@b-gate` |
 | 3 | "review", "verify logic", "requirements coverage" | `@b-review` |
 | 4 | "commit", "PR description", "push" | `@b-commit` |
-| 5 (last) | "implement", "write", "code", "add", "create", "refactor", "build", "extend" | `@b-tdd` |
-| — | (no match) | Ask: "Which agent for this step? (b-tdd / b-gate / b-review / b-commit / manual)" |
+| 5 (last / default) | "implement", "write", "code", "add", "create", "refactor", "build", "extend", "fix" | `@b-tdd` |
+| — | no higher-priority match but step still describes implementation work | `@b-tdd` |
+| — | step text is too vague to infer any action (for example: "handle this", "take care of it") | Ask: "Which agent for this step? (b-tdd / b-gate / b-review / b-commit / manual)" |
 
-**Routing note**: Priority 2 requires the keyword to be a primary action verb in the step description (e.g. "Run tests and validate quality"), not merely mentioned as part of an implementation step (e.g. "Implement service with unit tests" → Priority 5). When both Priority 2 and Priority 5 keywords are present in the same step, Priority 5 (`@b-tdd`) wins.
+**Routing note**: Priority 2 requires the keyword to be a primary action verb in the step description (e.g. "Run tests and validate quality"), not merely mentioned as part of an implementation step (e.g. "Implement service with unit tests" → Priority 5). When both Priority 2 and Priority 5 keywords are present in the same step, Priority 5 (`@b-tdd`) wins. Treat bug-fix steps as implementation work by default (for example: "Fix pagination bug" → `@b-tdd`).
 
 **Invocation format per subagent:**
 - `@b-tdd [plan-file]:[N]` — must run exactly step N
@@ -140,7 +141,7 @@ Show:
 - `@b-review [plan-file]` — no step number
 - `@b-commit` — no args
 
-Show routing decision and invoke immediately (no confirmation for unambiguous keyword-matched routes):
+Show routing decision and invoke immediately (no confirmation for unambiguous or default-routed steps):
 ```
 → Invoking Step N — [description] via @b-[agent] (keyword match: '[keyword]')
 ```

@@ -24,6 +24,8 @@ Quick lookups and news requests should call `brave_web_search` / `brave_news_sea
 
 **Execution guardrail**: in `b-execute-plan`, greenfield plans auto-skip pre-execution analysis. For existing-code plans, Step 0 (`b-analyze`) is risk-based: require it only for ambiguous scope, unfamiliar or multi-file/multi-layer work, shared/public/high-blast-radius modules, or stale/missing `## Context`. Small, local, well-scoped changes may skip it.
 
+**Execution routing guardrail**: in `b-execute-plan`, manual / gate / review / commit steps still route by explicit keywords first, but implementation-like steps now default to `@b-tdd` — including common `fix` wording. Ask for manual routing only when the step text is genuinely too vague to infer an action.
+
 **Post-execution suggestion guardrail**: when `b-execute-plan` finishes a plan, it must suggest follow-up actions with explicit subagent names when applicable — e.g. `@b-review` for diff review and `@b-commit` for commit / PR text — rather than generic wording.
 
 **OpenCode workflow**: planning (`@b-plan`) and execution (`@b-execute-plan`) both happen within OpenCode. Plan files must always be written inside the current project root at `.opencode/b-plans/*.md` and track step state there.
