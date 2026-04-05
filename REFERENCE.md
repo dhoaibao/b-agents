@@ -8,8 +8,6 @@ Formatting note: bullet style is standardized across all agent specs for consist
 
 ### b-plan
 
-**Model:** `anthropic/claude-sonnet-4-6`
-
 Decomposes non-trivial tasks into ordered steps, dependencies, and risks before
 implementation. Includes a conditional **feasibility gate (Step 0)** for uncertain scope
 to confirm Understanding Lock, blockers, and effort. Uses `sequential-thinking` for
@@ -60,8 +58,6 @@ reading plan files, tracking step completion, and auto-advancing through success
 `.opencode/b-plans/*.md` files, parses checkbox state, displays progress, invokes each agent
 automatically, and moves to the next stage on success. Pauses only on failure, ambiguous routing,
 manual steps, NEEDS FIXES verdicts, or parallel step choices.
-
-**Model:** `hdwebsoft/gpt-5.4`
 
 **Good triggers:**
 ```
@@ -208,8 +204,6 @@ the finished result.
 
 ### b-gate
 
-**Model:** `anthropic/claude-sonnet-4-6`
-
 Mandatory quality gate — runs after all implementation steps are done. Detects stack
 from config files and runs only checks that are present: **lint → typecheck → tests → coverage → security → clean-code → integration/e2e (soft block)**. Hard stops on lint failures, typecheck failures, test failures, coverage threshold violations (when threshold explicitly configured), and high/critical security findings. Soft blocks (warn, continue) on: coverage tool present but no threshold configured, medium/low security, formatting issues, and integration/e2e test failures (integration tests often require external services). Uses Bash only — no MCP required.
 
@@ -242,8 +236,6 @@ b-analyze does deep structural analysis — call graphs, complexity, duplication
 ---
 
 ### b-review
-
-**Model:** `anthropic/claude-sonnet-4-6`
 
 Pre-PR human-judgment review on changed code. Reads the git diff, establishes requirements
 baseline from the plan file (`.opencode/b-plans/`) or `$ARGUMENTS`, then checks five
@@ -312,8 +304,6 @@ On mixed-concern diffs: stops and outputs 2 separate commit message suggestions 
 ---
 
 ### b-analyze
-
-**Model:** `anthropic/claude-sonnet-4-6`
 
 Deep code analysis using jcodemunch — maps structure, measures complexity, identifies
 duplicate logic, dead code, and OOP issues; produces severity-ranked findings with
