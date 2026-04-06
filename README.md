@@ -36,6 +36,8 @@ Quick lookups and news requests should call `brave_web_search` / `brave_news_sea
 
 **Debugging contract**: `b-debug` is full-loop by default — when invoked directly or as a subagent, it should continue through **trace → confirm root cause → fix → verify** unless the caller explicitly asks for diagnosis-only output.
 
+**Observability handoff**: `b-review` does only a minimum observability check on newly added entry points. When that review surfaces instrumentation uncertainty, it should explicitly recommend `@b-observe`; `b-execute-plan` may surface that as an optional follow-up suggestion, not an automatic pipeline stage.
+
 **Git-safety guardrail**: destructive git commands are prohibited in all agents except `b-commit`, which owns all git write operations.
 
 ### MCP dependencies
