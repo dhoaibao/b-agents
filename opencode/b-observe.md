@@ -2,7 +2,7 @@
 name: b-observe
 description: Static observability audit — find missing log statements, swallowed errors, missing metrics, and absent tracing in source code.
 mode: subagent
-model: hdwebsoft/claude-sonnet-4-6
+model: opencode-go/minimax-m2.7
 ---
 
 

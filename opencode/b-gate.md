@@ -2,7 +2,7 @@
 name: b-gate
 description: Mandatory quality gate — stack-aware ordered checks lint → typecheck → tests → security → clean-code. Use after all implementation steps complete or when user says "gate", "check quality", "kiểm tra chất lượng".
 mode: subagent
-model: hdwebsoft/claude-sonnet-4-6
+model: opencode-go/minimax-m2.5
 ---
 
 
