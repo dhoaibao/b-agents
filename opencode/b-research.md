@@ -2,7 +2,7 @@
 name: b-research
 description: Deep research: search + scrape full pages + synthesize a comprehensive report with citations.
 mode: subagent
-model: opencode-go/kimi-k2.5
+model: hdwebsoft/gpt-5.4
 ---
 
 
