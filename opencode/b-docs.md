@@ -2,7 +2,7 @@
 name: b-docs
 description: Fetch live, version-accurate library documentation from Context7 before writing integration code.
 mode: subagent
-model: opencode-go/minimax-m2.5
+model: github-copilot/claude-haiku-4-5
 ---
 
 
