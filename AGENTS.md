@@ -108,27 +108,11 @@ All agents live in `opencode/b-[name].md`. When changing agent files:
 | **Update** agent | Edit `opencode/b-[name].md` directly |
 | **Delete** agent | Delete `opencode/b-[name].md` |
 
-**Exception: `b-execute-plan`** — its agent file contains intentional adaptations that must be preserved when updating:
-
-| What changed | What to do in agent file |
-|---|---|
-| Step logic / routing / rules | Apply the equivalent change manually, keeping `@b-[name]` format |
-| New subagent invocation added | Add to the `## Subagent invocation` section |
-| New inter-agent state (e.g. new section written to plan file) | Update the state bridging block accordingly |
-| Output format / cosmetic | Copy directly — no translation needed |
-
-Intentional differences to preserve in `b-execute-plan` agent file:
-- All subagent invocations use `@b-[name]` format
-- State bridging block: writes context to plan file before each subagent call (`## Context`, `## Last Gate Failure`, `## Review Feedback`)
-- `## Subagent invocation` section lists `@b-[name]` syntax throughout
-
 **`opencode/global/AGENTS.md` sync** — update `opencode/global/AGENTS.md` (global rules) and `AGENTS.md` (repo rules) in the same commit when any of these change:
 
 | Change | Section to update |
 |---|---|
-| Subagent added or removed | `## Subagents` table in `opencode/global/AGENTS.md` |
-| New plan file section added | `## Plan file state sections` table in `opencode/global/AGENTS.md` |
-| b-execute-plan workflow changes | `## Invoking the execution pipeline` in `opencode/global/AGENTS.md` and the `b-execute-plan` Step 0 policy in this file's review checklist / related guidance |
+| Agent added or removed | Agent table in `opencode/global/AGENTS.md` |
 | Git safety rules change | `## Git safety` in `opencode/global/AGENTS.md` |
 
 **Agent file structure** — every `opencode/b-[name].md` follows this format:
@@ -176,7 +160,6 @@ Before merging any agent file change, verify:
 3. **Every fallback path is explicit** — if a tool is unavailable, the agent says exactly what to do (stop, degrade, or use alternative)
 4. **Inter-agent handoffs have trigger conditions** — "if [condition] → use b-[other]" with the specific condition, not just "consider using"
 5. **No trigger keyword regression** — before rewriting a description, list all current trigger keywords and verify all survive in the new version
-6. **`b-execute-plan` Step 0 stays risk-based** — do not make pre-execution analysis always-on for every existing-code change; require it only for ambiguous, unfamiliar, broad, high-blast-radius, or stale-context cases
 
 ---
 
@@ -187,11 +170,16 @@ Before merging any agent file change, verify:
 ```
 b-agents/
 ├── opencode/
-│   ├── AGENTS.md         ← Global OpenCode rules (symlinked to ~/.agents/AGENTS.md)
-│   └── b-new-agent.md    ← OpenCode agent file
+│   ├── global/
+│   │   └── AGENTS.md     ← Global OpenCode rules (symlinked to ~/.agents/AGENTS.md)
+│   ├── b-plan.md
+│   ├── b-research.md
+│   ├── b-debug.md
+│   └── b-review.md
 ├── install.sh
 ├── README.md
 ├── REFERENCE.md
+├── TIERS.md
 └── AGENTS.md             ← Repo-level authoring conventions
 ```
 

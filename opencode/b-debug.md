@@ -1,7 +1,7 @@
 ---
 name: b-debug
 description: Systematic hypothesis-driven debugging — trace execution paths, form ranked hypotheses, confirm root cause, then fix and verify by default. Use when user says "debug", "bug", "lỗi", "không chạy", "fix this", or pastes an error message.
-mode: subagent
+mode: primary
 model: github-copilot/gpt-5.3-codex
 ---
 
@@ -31,9 +31,8 @@ If `$ARGUMENTS` explicitly limits scope to investigation-only, honor that limit 
 
 ## When NOT to use
 
-- Code works but could be better (quality, patterns, complexity) → use **b-analyze**
 - Building a new feature or multi-file change → use **b-plan**
-- Need to understand unfamiliar code before changes → use **b-analyze**
+- Need library API details before writing code → use **b-research**
 
 ## Tools required
 
@@ -49,10 +48,13 @@ From `jcodemunch` MCP server:
 - `get_related_symbols` — discover functions closely associated with a suspicious symbol.
 - `get_symbol_diff` — detect regressions by diffing a symbol between two indexed states.
 - `search_text` — search for error strings or regex patterns across the codebase.
-- `index_file` — re-index a single changed file after applying a fix (keeps jcodemunch index fresh for subsequent b-analyze calls)
+- `index_file` — re-index a single changed file after applying a fix (keeps jcodemunch index fresh)
 
 From `sequential-thinking` MCP server:
 - `sequentialthinking` — structured reasoning to form and rank hypotheses.
+
+From `context7` MCP server *(optional)*:
+- `resolve-library-id` + `query-docs` — verify correct library API behavior when a hypothesis points to API misuse or version mismatch. Faster than invoking full b-research for a single API question.
 
 From `brave-search` MCP server *(optional)*:
 - `brave_web_search` — look up known library errors, GitHub issues, changelogs.
@@ -63,6 +65,7 @@ From `firecrawl` MCP server *(optional)*:
 
 If jcodemunch is unavailable, or `index_folder` returns `file_count = 0` or `is_stale: true`: use Glob/Grep/Read to map files manually, proceed with Steps 2.1–2.4. Always note: "⚠️ jcodemunch unavailable — analysis based on Glob/Grep/Read; cross-file tracking incomplete."
 If sequential-thinking is unavailable: reason through hypotheses inline, document steps explicitly in response.
+If context7 is unavailable: invoke b-research for library API questions instead.
 
 Graceful degradation: ✅ Possible — if jcodemunch unavailable, use Glob/Grep/Read for file analysis. Quality is reduced but the agent remains functional.
 
@@ -85,7 +88,7 @@ or "recent changes" is often the fastest path to root cause.
 
 ### Step 2 — Map the code structure
 
-> **Session optimization**: If b-analyze has already run for the same codebase in this session, skip step 2.0 (index/resolve) and reuse the existing repo identifier — the jcodemunch index is still current. Proceed directly to `get_context_bundle` on the relevant entry point.
+> **Session optimization**: If jcodemunch has already been queried in this session, reuse the repo identifier — do not re-index. Proceed directly to `get_context_bundle` on the relevant entry point.
 
 Use `jcodemunch` to trace the execution path in this order:
 
@@ -126,7 +129,7 @@ Present the ranked hypotheses to the user briefly before investigating.
 **Library error shortcut**: If the error message or stack trace references a specific library or framework:
 - Use `brave_web_search` with the exact error message in quotes to find known issues, GitHub issues, or changelog entries.
 - If results include a GitHub issue page, Stack Overflow answer, or changelog URL that looks relevant → call `firecrawl_scrape` on the top 1–2 most relevant URLs before verifying hypotheses. Use `formats: ["markdown"]`. Cap at 2 URLs. If the page returns empty or <200 words → call `firecrawl_map` on the domain root to find the correct URL, then retry scrape on the mapped URL. If still empty, proceed with snippets only.
-- If results point to an API misuse, invoke `b-docs` to verify the correct behavior for that library version.
+- If results point to an API misuse → call `resolve-library-id` + `query-docs` with the specific method/behavior in question. This is faster than b-research for a single API question. Escalate to b-research only if context7 has no index for the library.
 - Do this before verifying hypotheses — it may eliminate wrong hypotheses immediately and save significant time.
 
 **Error string search**: If the error message text is short and specific → call `search_text(is_regex=false, pattern="[exact error string]")` to find all places in the codebase that produce or handle this error. This often reveals the true origin faster than tracing the call graph.
@@ -141,7 +144,7 @@ Test hypotheses starting from the most likely:
 - Check config/env values if hypothesis points there.
 - Use `get_symbol_source` or `get_context_bundle` (jcodemunch) to re-examine a specific function if the call graph revealed something suspicious.
 - Use `get_related_symbols` on a suspicious function to discover other functions with similar logic — useful when the bug pattern may exist in multiple places.
-- If the codebase uses a library: invoke `b-docs` to verify the correct API behavior for that library version.
+- If the hypothesis points to library API misuse: call `resolve-library-id` + `query-docs` directly to verify the correct method signature, parameter order, or behavior. Escalate to b-research only if context7 has no index.
 - **Regression detection**: if the bug appeared after a recent change, use `get_symbol_diff` to compare the current symbol against an older indexed state (requires two index snapshots)
 
 **Dynamic verification** — if static analysis is insufficient to confirm root cause (plausible hypothesis but not provable from code alone):
@@ -169,7 +172,7 @@ Now that root cause is confirmed, the default behavior is to implement the minim
 - Write the minimal fix — don't refactor unrelated code in the same change.
 - If the fix touches a non-obvious API or behavior, add a comment explaining why.
 - If the bug reveals a broader pattern (e.g. same silent-catch pattern exists in 3 other places), flag it to the user as a separate follow-up — don't fix everything at once.
-- After applying the fix, call `index_file` on each changed file to keep the jcodemunch index fresh — this ensures any subsequent b-analyze call sees the current code, not the pre-fix state.
+- After applying the fix, call `index_file` on each changed file to keep the jcodemunch index fresh.
 
 ---
 
@@ -178,9 +181,9 @@ Now that root cause is confirmed, the default behavior is to implement the minim
 After applying the fix:
 
 - State what behavior should now change and how to confirm it.
-- Suggest the minimal test to verify (a specific request, a unit test, a log line to check)
+- **Detect test command** from the project: check `package.json` scripts, `pytest.ini`, `Makefile`, `Cargo.toml`, or equivalent. Suggest the specific command scoped to the affected module — e.g. `npm test -- --testPathPattern=auth`, `pytest tests/test_auth.py`, `go test ./internal/auth/...`. Do not just say "run your tests".
 - If the fix involved a config/env change, remind the user to restart the process.
-- If the fix introduced new code (new function, new module) → run **b-gate** on the changed files to validate lint, tests, and security before closing the bug. For structural review of the new code → run `b-analyze: [fixed module]` separately.
+- If the fix changed more than 2 files or introduced new functions/modules → suggest running `b-review` before committing to catch any logic or requirements gaps the fix may have introduced.
 - Do not end at "root cause found". Close the loop by stating the applied fix and the exact verification step unless the caller explicitly requested diagnosis-only mode.
 
 ---
@@ -224,6 +227,6 @@ Note any silent catch blocks or unexpected stops in the path.
 - Always map the full execution path first — the bug is often not where it surfaces.
 - If 2+ hypotheses seem equally likely, verify the cheaper one first.
 - Silent failure points (swallowed exceptions, missing logs) are the most common cause of "no error but not working" bugs — check these first.
-- If the fix requires understanding a library's behavior, use `b-docs` to verify — don't assume.
+- If the fix requires understanding a library's behavior: use context7 first (`resolve-library-id` + `query-docs`); escalate to b-research only if context7 has no index for that library.
 - Keep fixes minimal — one bug, one fix.
-- Never trigger destructive git commands — no `git push`, `git pull`, `git commit`, `git reset`, `git revert`, `git clean -f`, `git checkout -- <file>`, or `git branch -D`. If a commit is needed after completing work, delegate to b-commit.
+- Never trigger destructive git commands — no `git push`, `git pull`, `git commit`, `git reset`, `git revert`, `git clean -f`, or `git checkout -- <file>`.

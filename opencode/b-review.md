@@ -1,7 +1,7 @@
 ---
 name: b-review
-description: Pre-PR code review — verify logic correctness, requirements fulfillment, edge case coverage, and test adequacy before opening a pull request. Use when user says "review before PR", "kiểm tra logic", or after b-gate passes.
-mode: subagent
+description: Pre-PR code review — verify logic correctness, requirements fulfillment, edge case coverage, and test adequacy before opening a pull request. Use when user says "review before PR", "kiểm tra logic", or after implementation is done.
+mode: primary
 model: github-copilot/gpt-5.3-codex
 ---
 
@@ -20,17 +20,15 @@ requirements baseline for Step 2.
 
 ## When to use
 
-- After b-gate passes, before committing or opening a PR.
+- After implementation is done, before committing or opening a PR.
 - User says "review before PR", "kiểm tra logic trước khi push", "what would a reviewer flag".
 - Validating that the implementation actually fulfills the original requirements.
 - Checking if test coverage is adequate for the behavior that was changed.
 
 ## When NOT to use
 
-- Structural quality review (complexity, duplication, coupling) → use **b-analyze**
-- Automated checks (lint, typecheck, tests, security) → use **b-gate**
 - Something is broken → use **b-debug**
-- Pre-implementation understanding → use **b-analyze**
+- Need library API details before writing code → use **b-research**
 
 ## Tools required
 
@@ -38,12 +36,16 @@ requirements baseline for Step 2.
 - `sequentialthinking` — from `sequential-thinking` MCP server — structured review reasoning.
 - `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_changed_symbols`, `get_blast_radius`, `get_impact_preview`, `get_symbol_source`, `get_context_bundle` — from `jcodemunch` MCP server *(required when the repo is locally indexed or indexable; use fallback only if jcodemunch is unavailable or indexing fails)*
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for fetching issue/ticket URL content when an `**Issue**:` URL is present in the plan file)*
+- `resolve-library-id` + `query-docs` — from `context7` MCP server *(optional, for verifying library API calls in changed code — catches wrong method signatures, deprecated APIs, misused parameters)*
+- `brave_web_search` — from `brave-search` MCP server *(optional, for CVE/known-vulnerability lookup when a risky security pattern is found in changed code)*
 
 If sequential-thinking is unavailable: reason through review dimensions inline, document each explicitly.
-If jcodemunch is unavailable, or `index_folder` returns `file_count = 0` or `is_stale: true`: use Read tool to inspect changed files directly and explicitly note that blast-radius / changed-symbol prioritization / transitive impact review were skipped. Always note: "⚠️ jcodemunch unavailable — blast-radius analysis unavailable."
+If jcodemunch is unavailable, or `index_folder` returns `file_count = 0` or `is_stale: true`: use Read tool to inspect changed files directly. Note: "⚠️ jcodemunch unavailable — blast-radius analysis unavailable."
 If firecrawl is unavailable: skip Issue URL fetch; display ticket ID or URL as a context reference only.
+If context7 is unavailable: skip API verification step; note any suspicious library calls manually.
+If brave-search is unavailable: skip CVE lookup; flag the pattern as a manual security review item.
 
-Graceful degradation: ✅ Possible — core review works with Bash + Read. sequential-thinking improves structure of findings; jcodemunch improves symbol context; firecrawl enriches issue context. All optional.
+Graceful degradation: ✅ Possible — core review works with Bash + Read. Each MCP adds a specific review dimension; none is strictly required.
 
 ## Steps
 
@@ -124,10 +126,18 @@ Read the changed code (use `get_symbol_source` or Read tool) and check:
 - Does the code modify shared state unexpectedly?
 - Are there unintended writes to external systems (DB, cache, queue) in non-obvious paths?
 
+**Library API correctness** *(when changed code calls external libraries)*
+- Identify third-party library calls in the diff (SDK methods, ORM queries, queue clients, HTTP clients). Skip stdlib calls (`JSON.parse`, `Array.map`, etc.).
+- Pick the **top 2–3 most suspicious calls**: prioritize (a) unfamiliar or less common libraries, (b) calls with complex parameter patterns, (c) anything involving auth, crypto, or serialization.
+- For each selected call: `resolve-library-id` + `query-docs` with the specific method to verify signature, parameter order, required fields, and deprecation status.
+- Flag if: wrong parameter order, deprecated method, missing required field, or behavior differs from what the code assumes.
+- Cap at 3 context7 calls per review — don't verify every import.
+
 **Security review**
 
 **Always check** (no fast-path exception):
 - **Injection vectors** — is dynamic SQL, shell commands, or HTML constructed with unsanitized input? Check every user-facing input path regardless of diff size.
+- **CVE lookup** — if an injection vector or known-risky pattern is found (e.g. `eval`, `exec`, `deserialize`, raw SQL concatenation, `innerHTML`): call `brave_web_search` with `"[pattern or library] CVE [year]"` to check for known vulnerabilities. Cap at 1 search query. Add findings to the security section.
 
 **Skip if diff ≤50 lines AND ≤2 files** (fast-path threshold — same as Step 2):
 1. **Auth/authz** — do new endpoints or handlers require authentication? Is it enforced? Are role/permission checks correct?
@@ -178,26 +188,26 @@ If tests are missing for a requirement or critical edge case: flag as a finding,
 
 **Skip entirely if**: diff is ≤50 lines AND ≤2 files (same fast-path threshold as Step 2).
 
-**Skip entirely if**: the diff does not add new endpoints, route handlers, background jobs, or queue consumers. If the change only modifies existing behavior or is a pure fix, skip this step.
+**Skip entirely if**: the diff does not add new endpoints, route handlers, background jobs, or queue consumers.
 
 **When triggered** — check *changed code only* for minimum instrumentation:
 
-1. **Entry-point logging** — is there at least one structured log call at the handler entry point? (e.g. `logger.info(...)`, `log.Printf(...)`, structured JSON log.) A single log at entry is sufficient; this is not a coverage audit.
-2. **Error capture** — are errors caught and logged or re-raised? Check for try/catch/except blocks that swallow errors silently (no log, no re-raise). A swallowed error is an observability black hole.
-3. **Metric emission** — if the new code implies a metric (new endpoint → request count/latency, new background job → job duration/success rate), is a metric emitted? This check is advisory — flag missing metrics as a suggestion, not a blocker.
+1. **Entry-point logging** — is there at least one structured log call at the handler entry point? A single log at entry is sufficient.
+2. **Error capture** — are errors caught and logged or re-raised? Check for try/catch/except blocks that swallow errors silently (no log, no re-raise).
+3. **Metric emission** — if the new code implies a metric (new endpoint → request count/latency), is a metric emitted? Advisory — flag as suggestion, not a blocker.
 
-**Note**: this is not a full observability audit — only minimum instrumentation on new code. For a complete instrumentation review → run `b-observe` separately.
-
-**Handoff rule**: if Step 5.5 finds missing entry logs, swallowed errors, or broader instrumentation uncertainty in newly added handlers/endpoints/jobs, end the review with an explicit follow-up suggestion: `run b-observe: [changed module or entry-point scope]` for a full observability audit. Use this as a suggestion when the gap is non-blocking, or as part of NEEDS FIXES when the gap leaves a new critical path effectively opaque.
+Flag any gaps as findings in the review output. Non-blocking gaps go under Suggestions; a new critical path left completely opaque goes under Blockers.
 
 ---
 
-### Step 6 — Use sequential-thinking to consolidate
+### Step 6 — Consolidate findings
 
-Call `sequentialthinking` with:
-> "Given these review findings [list from Steps 3–5.5], which issues must be fixed before this PR can be merged, which are suggestions, and what specific question would a senior engineer ask about this code?"
+**If Steps 3–5.5 found 3 or more issues**, or there is genuine ambiguity about which issues are blockers vs suggestions: call `sequentialthinking` with:
+> "Given these review findings [list], which must be fixed before merge, which are non-blocking suggestions, and what one question would a senior engineer ask about this code?"
 
-Use the output to produce the final report.
+**If fewer than 3 findings**, or all findings clearly classify as blocker/suggestion: consolidate inline without calling sequentialthinking — it adds no value when the classification is obvious.
+
+Use the output (or inline reasoning) to produce the final report.
 
 ---
 
@@ -254,7 +264,6 @@ Blockers (must fix before PR):
 
 Suggestions (non-blocking):
 - [item]
-- [If observability follow-up is warranted] Run `b-observe: [scope]` for a full instrumentation audit.
 ```
 
 ---
@@ -264,9 +273,8 @@ Suggestions (non-blocking):
 - Never review without a requirements baseline — a review without knowing what was intended produces noise, not signal.
 - Blocker = anything that would cause a reviewer to request changes before merge.
 - Suggestion = improvement that does not block correctness or requirement fulfillment.
-- Do not re-run automated checks (lint, tests) — b-gate owns that; b-review owns human judgment.
-- If the review uncovers observability uncertainty on new entry points, recommend `b-observe` explicitly instead of stretching b-review into a full instrumentation audit.
+- Do not re-run automated checks (lint, tests) — those are the user's responsibility; b-review owns human judgment.
 - If logic is too complex to understand without running it, say so — do not guess.
 - Keep the diff scope in mind: a 3-line fix needs a lighter review than a 200-line feature.
 - If requirements are not fulfillable with the current implementation, state clearly: "Requirement X is not met — the implementation does Y instead of Z".
-- Never trigger destructive git commands — no `git push`, `git pull`, `git commit`, `git reset`, `git revert`, `git clean -f`, `git checkout -- <file>`, or `git branch -D`. If a commit is needed after completing work, delegate to b-commit.
+- Never trigger destructive git commands — no `git push`, `git pull`, `git commit`, `git reset`, `git revert`, `git clean -f`, or `git checkout -- <file>`.

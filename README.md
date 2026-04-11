@@ -1,6 +1,6 @@
 # b-agents
 
-A personal agent suite for **OpenCode**.
+A lean 4-agent suite for **OpenCode**.
 
 ## Install & Update
 
@@ -10,35 +10,29 @@ curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agents/main/install.sh |
 
 Then **restart OpenCode** to load the agents.
 
-> **To update agents later**: rerun the install command above, then restart OpenCode.
-
 ---
 
 ## Overview
 
-Agents are organized into one integrated development suite:
+Four agents covering the full development cycle:
 
-- **Development agents** — a tightly integrated pipeline: `b-plan → b-tdd → b-gate → b-review → b-commit`, with `b-analyze`, `b-debug`, `b-docs`, `b-research`, and `b-observe` as supporting tools. `b-execute-plan` orchestrates the full pipeline.
+| Agent | When to use |
+|---|---|
+| `b-plan` | Think before coding — task decomposition, approach evaluation, plan file |
+| `b-research` | All external knowledge — library docs, comparisons, multi-source research |
+| `b-debug` | Full-loop debugging — trace, confirm root cause, fix, verify |
+| `b-review` | Pre-PR review — logic, requirements, edge cases, test adequacy |
 
-Quick lookups and news requests should call `brave_web_search` / `brave_news_search` directly instead of routing through separate utility agents.
+**Typical flow:**
+```
+b-plan → [implement manually] → b-review → commit
+b-research  (any time you need docs or comparisons)
+b-debug     (any time something breaks)
+```
 
-**Execution guardrail**: in `b-execute-plan`, greenfield plans auto-skip pre-execution analysis. For existing-code plans, Step 0 (`b-analyze`) is risk-based: require it only for ambiguous scope, unfamiliar or multi-file/multi-layer work, shared/public/high-blast-radius modules, or stale/missing `## Context`. Small, local, well-scoped changes may skip it.
+See [REFERENCE.md](REFERENCE.md) for full details — triggers, output format, rules, and agent distinctions.
 
-**Execution routing guardrail**: in `b-execute-plan`, manual / gate / review / commit steps still route by explicit keywords first, but implementation-like steps now default to `@b-tdd` — including common `fix` wording. Ask for manual routing only when the step text is genuinely too vague to infer an action.
-
-**Post-execution suggestion guardrail**: when `b-execute-plan` finishes a plan, it must suggest follow-up actions with explicit subagent names when applicable — e.g. `@b-review` for diff review and `@b-commit` for commit / PR text — rather than generic wording.
-
-**OpenCode workflow**: planning (`@b-plan`) and execution (`@b-execute-plan`) both happen within OpenCode. Plan files must always be written inside the current project root at `.opencode/b-plans/*.md` and track step state there.
-
-**Codebase understanding workflow**: jcodemunch-backed agents now use a shared preflight: `resolve_repo` (cached repo map) → `get_repo_outline` health check / re-index if coverage is implausibly low → `suggest_queries` (entrypoint discovery) → `get_ranked_context` (bounded relevant context) before deeper symbol/file reads.
-
-**Structured reasoning workflow**: for non-trivial debugging, planning, trade-off analysis, and prioritization, agents must call `sequential-thinking` and surface the ordered result explicitly rather than hiding it behind free-form prose.
-
-**Debugging contract**: `b-debug` is full-loop by default — when invoked directly or as a subagent, it should continue through **trace → confirm root cause → fix → verify** unless the caller explicitly asks for diagnosis-only output.
-
-**Observability handoff**: `b-review` does only a minimum observability check on newly added entry points. When that review surfaces instrumentation uncertainty, it should explicitly recommend `@b-observe`; `b-execute-plan` may surface that as an optional follow-up suggestion, not an automatic pipeline stage.
-
-**Git-safety guardrail**: destructive git commands are prohibited in all agents except `b-commit`, which owns all git write operations.
+---
 
 ### MCP dependencies
 
@@ -51,9 +45,3 @@ Quick lookups and news requests should call `brave_web_search` / `brave_news_sea
 | `sequential-thinking` | Structured reasoning |
 
 Verify all 5 are connected in OpenCode.
-
----
-
-## Agent reference
-
-See [REFERENCE.md](REFERENCE.md) for full details — triggers, output format, rules, and agent distinctions.

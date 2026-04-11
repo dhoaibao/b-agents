@@ -1,21 +1,29 @@
 ---
 name: b-plan
-description: Decompose non-trivial tasks into ordered steps, dependencies, and risks before coding.
+description: >
+  Think before coding. Decompose non-trivial tasks into ordered steps, evaluate approaches,
+  surface risks, and produce an execution-ready plan file. ALWAYS use when the user says
+  "plan", "thiết kế", "how should I approach", "lên kế hoạch", "nên bắt đầu từ đâu",
+  or the task spans more than 2 files or has unclear scope.
+  Unlike b-debug (fix broken) or b-research (lookup info), b-plan owns the decision of
+  what to build and in what order.
 mode: primary
 model: anthropic/claude-opus-4-6
 ---
 
-
 # b-plan
 
-Think before coding. Use sequential-thinking to decompose tasks into ordered steps,
-surface dependencies, identify risks, and produce a clear execution plan — before any
-implementation begins.
+$ARGUMENTS
+
+Think before coding. Lock scope, evaluate approaches, decompose into ordered steps,
+surface risks and unknowns — then produce a clear plan file before any implementation.
+
+If `$ARGUMENTS` is provided, treat it as the task description — skip asking "what do you want to build?" in Step 1 and proceed directly with the stated task. Ask only for missing context (constraints, greenfield vs existing, issue URL).
 
 ## When to use
 
 - Task involves more than 2 files or multiple layers (API, DB, service, UI).
-- Task has unclear scope or multiple valid approaches.
+- Task has unclear scope or multiple valid approaches — need a decision.
 - User is about to implement something non-trivial and hasn't thought through the order.
 - Refactoring, architecture changes, or new feature integration.
 - User says: "plan", "thiết kế", "how should I approach X", "lên kế hoạch", "nên bắt đầu từ đâu".
@@ -23,195 +31,156 @@ implementation begins.
 ## When NOT to use
 
 - Simple single-file edit or ≤2-step task → do it directly.
-- Something is broken and needs debugging → use **b-debug**.
-- Quick fact lookup → call `brave_web_search` or `brave_news_search` directly; library API question → use **b-docs**.
+- Something is broken → use **b-debug**.
+- Quick fact or library lookup → use **b-research**.
 
 ## Tools required
 
-- `sequentialthinking` — from `sequential-thinking` MCP server (required for Step 2 decomposition and trade-off decisions).
-- `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_repo_outline`, `get_file_outline`, `get_file_tree`, `get_blast_radius`, `check_rename_safe`, `index_file` — from `jcodemunch` MCP server *(required for modify-existing-code tasks; optional for pure greenfield work)*.
-- `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for inline library verification in Step 3 — simple lookups only; delegate complex research to b-docs)*.
-- `brave_web_search` — from `brave-search` MCP server *(optional, for tool/approach comparison in Step 3 — simple lookups only; delegate multi-source research to b-research)*.
+- `sequentialthinking` — from `sequential-thinking` MCP server (required for Steps 3–4: approach evaluation and decomposition).
+- `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_repo_outline`, `get_dependency_graph`, `get_file_outline`, `get_file_tree`, `get_blast_radius`, `check_rename_safe` — from `jcodemunch` MCP server *(required for modify-existing-code tasks; optional for pure greenfield)*.
+- `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for inline library verification in Step 5 — simple lookups only)*.
+- `brave_web_search` — from `brave-search` MCP server *(optional, for tool/approach comparison in Step 5 — simple lookups only)*.
+- `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for scraping Issue/ticket URL in Step 1)*.
 
-If sequential-thinking is unavailable: reason through the plan inline step by step,
-making the thinking explicit in the response. Do not skip planning — just do it without the tool.
-If jcodemunch is unavailable, or `index_folder` returns `file_count = 0` or `is_stale: true`: use Glob/Read to inspect key files manually before Step 2 and explicitly note that blast-radius / rename-safety checks were skipped. Always note: "⚠️ jcodemunch unavailable — analysis based on Glob/Read; cross-file tracking incomplete."
-If context7 is unavailable: delegate library verification to b-docs as before.
-If brave-search is unavailable: delegate tool comparison to b-research as before.
+If sequential-thinking is unavailable: reason through plans and trade-offs inline with explicit numbered steps.
+If jcodemunch is unavailable: use Glob/Read to inspect key files. Note: "⚠️ jcodemunch unavailable — cross-file tracking incomplete."
+If context7 or brave-search is unavailable: delegate to b-research.
+If firecrawl is unavailable: store the Issue URL as a plain reference without scraping.
 
-Graceful degradation: ✅ Possible — if jcodemunch unavailable, use Glob/Read. If sequential-thinking unavailable, reason inline. context7 and brave-search are convenience shortcuts; b-docs and b-research are always available as fallbacks.
+Graceful degradation: ✅ Possible — core planning works without MCPs using inline reasoning and Glob/Read.
 
 ## Steps
 
-### Step 0 — Feasibility gate *(conditional)*
+### Step 1 — Scope lock
 
-Run if the task introduces significant behavior, touches unfamiliar code, or the user has not decided to proceed.
-Skip if the task is clearly scoped, already approved, or ≤3 steps/single-file.
+Confirm what is being built before scanning any code.
 
-**Understanding Lock** — before scanning code, confirm:
-- **What does the user want?** State the feature in one sentence. Ask the user to confirm.
-- **What does "done" look like?** List 2–4 concrete success criteria.
-- **Any hard constraints?** (Performance, compatibility, tech stack limits, deadline.)
-- **Is the decision already made?** If yes, skip this step entirely — move to Step 1.
+**If the task is clearly scoped** (user already described the full feature, no ambiguity):
+- Restate the scope in one sentence and ask the user to confirm.
+- If confirmed, move directly to Issue URL and greenfield/existing check below.
 
-If the user corrects scope, update and re-confirm once. If still unclear, ask one focused clarifying question.
+**If the task has unclear scope or the user hasn't fully thought it through**:
+- Ask the three scope questions:
+  - **What is the end state?** What does "done" look like exactly?
+  - **What are the hard constraints?** Performance, compatibility, deadlines, must-not-break areas.
+  - **What does success look like?** 2–4 concrete, verifiable criteria.
+- Ask once. If still unclear, ask one focused follow-up. Don't loop.
 
-**Quick feasibility scan** — once scope is locked, check:
-1. Does the current architecture support this? Use jcodemunch (`get_repo_outline`, `get_dependency_graph`) or Glob/Read if jcodemunch is unavailable, or if `index_folder` returns `file_count = 0` or `is_stale: true`. Always note: "⚠️ jcodemunch unavailable — cross-file tracking incomplete."
-2. Are there blockers? (Missing infrastructure, incompatible dependencies, fundamental architectural gaps.)
-3. Effort estimate: S (hours) / M (1–2 days) / L (3–5 days) / XL (1–2 weeks) / XXL (weeks+).
+**Feasibility check** *(run inline when scope is non-trivial — not a separate step)*:
+- Does the current architecture support this? Use `get_repo_outline` + `get_dependency_graph` from jcodemunch (or Glob/Read if unavailable).
+- Any blockers? (Missing infrastructure, incompatible dependencies, architectural gaps.)
+- Effort estimate: S (hours) / M (1–2 days) / L (3–5 days) / XL (1–2 weeks) / XXL (weeks+).
+- If blockers found: state clearly. If no workaround exists, do not proceed until resolved.
+- If XL–XXL AND unfamiliar pattern or unverified library: stop and run b-research first.
 
-**Scope of Step 0:** lightweight gate only (architecture fit, blockers, effort). It does not replace deep docs/research work (`b-docs`, `b-research`) for uncertain external constraints.
+**Issue/ticket** *(optional)*:
+- Ask once: "Issue/ticket URL or ID? (Leave blank to skip.)"
+- If a URL is provided: call `firecrawl_scrape` with `formats: ["markdown"], onlyMainContent: true`. Trim to 800 words and use as **requirements context** for Steps 3–5. If scrape returns <200 characters or 403: store the URL as a plain reference.
+- If a ticket ID (not a URL): store as-is; no fetch.
 
-**Gate outcome:**
-- No blockers, effort S–L → proceed to Step 1.
-- No blockers, effort XL–XXL AND any of the following apply → **stop and run a dedicated research session before planning**: unfamiliar architectural pattern (event sourcing, CQRS, real-time sync), unverified library capability, large blast radius, third-party service constraints unknown. Use `b-docs` or `b-research` to resolve these, then return to b-plan.
-- No blockers, effort XL–XXL, constraints known → surface scope to user, confirm, then proceed to Step 1.
-- Blocker found → follow this escalation sequence:
-  1. **State the blocker clearly**: describe exactly what is blocked and why.
-  2. **If a workaround exists** → document it explicitly and ask the user to confirm before proceeding to Step 1. Label any plan step that depends on the workaround with a `⚠️ depends on workaround for [blocker]` note.
-  3. **If no workaround exists** → recommend descoping (remove or defer the blocked scope) or resolving the blocker first. **Do NOT proceed to Step 1** until the blocker is resolved or descoped.
-  4. **Never plan around an unresolved blocker.** Planning around an unknown is a risk you can surface; planning around a known blocker produces a plan that will fail at execution time.
-
-Append a `## Feasibility` section to the plan file (optional — only if Step 0 was run):
-```markdown
-## Feasibility
-**Effort**: [S/M/L/XL/XXL]
-**Blockers**: [none / description]
-**Assumptions confirmed**: [list]
-```
+**Greenfield vs existing**:
+- Is this a new module/service, or modifying existing code?
+- If existing code → proceed to Step 2. If greenfield → skip Step 2.
 
 ---
 
-### Step 1 — Clarify scope
+### Step 2 — Scan existing code *(existing-code tasks only)*
 
-**If Step 0 was run**: skip scope and end-state confirmation — already locked in Understanding Lock. Only verify:
-- (a) **Greenfield vs existing code?** Is this a new module or modifying existing files?
-- (b) **Any hard constraints not yet captured?** (Only ask if Step 0 did not already surface them.)
+Use jcodemunch to understand what already exists before planning:
 
-**If Step 0 was skipped**: confirm all three:
-- **What is the end state?** What does "done" look like exactly?
-- **What already exists?** Is this greenfield or modifying existing code?
-- **What are the constraints?** Deadlines, must-not-break areas, tech stack limits?
+- Run the standard preflight (see `global/AGENTS.md § jcodemunch preflight`) with query = "[requested change description]".
+- `get_file_tree(path_prefix="src/")` — scoped directory view for the affected area.
+- `get_repo_outline` — overall structure, module boundaries.
+- `get_file_outline(file_paths=[...])` — batch-inspect files the plan will touch.
 
-**In both cases**, ask once (optional):
-- **Issue/ticket URL or ID?** (optional — leave blank to skip) If provided, store as `**Issue**: [value]` in the plan file header, after `**Created**`. Accepts any format: full URL (`https://linear.app/…`, `https://github.com/…/issues/123`), short ticket ID (`PROJ-456`, `#123`), or free-text reference.
-
-If ambiguous, ask one focused clarifying question. Once clear, proceed.
+**Goal**: reference real paths and symbols. A plan that references wrong file names or non-existent functions fails at execution.
 
 ---
 
-### Step 1.5 — Scan existing code *(conditional)*
+### Step 3 — Evaluate approaches *(conditional)*
 
-Run if: task modifies or extends existing code.
-Skip if: pure greenfield with no existing modules.
+Run if the task has a structural decision: new module vs extending existing, sync vs async, REST vs event-driven, library A vs B.
 
-Use jcodemunch to scan before decomposition:
-- Run the standard preflight (see `global/AGENTS.md § jcodemunch preflight`) with query = "[requested change description — feature, module, or bugfix area]". Use the returned ranked context as the primary read set for planning.
-- `get_file_tree(path_prefix="src/")` — scoped directory view when the task targets a subdirectory.
-- `get_repo_outline` — understand overall structure, file layout, module boundaries.
-- `get_file_outline` (batch: `file_paths=[...]`) — inspect specific files the plan will touch; use batch mode to load multiple files in one call.
+1. List 2–3 viable approaches with key trade-offs (complexity, performance, coupling, reversibility).
+2. Use `sequentialthinking` to evaluate them systematically.
+3. Pick one and document in `## Decision` (see plan file format below).
 
-**Goal**: reference real paths/symbols and follow existing patterns. Wrong assumptions here cause execution failure later.
+Skip this step if the approach is already obvious or decided — do not invent choices where there are none.
 
 ---
 
-### Step 2 — Decompose with sequential-thinking
+### Step 4 — Decompose
 
-Use `sequential-thinking` to create atomic steps:
+Use `sequentialthinking` to break the chosen approach into atomic, ordered steps:
 
-- Independently executable and verifiable.
-- Ordered by dependency.
-- Usually 4–8 steps (split into phases if >10).
+- Each step: independently executable, independently verifiable.
+- Ordered by dependency — not by what's easiest.
+- Usually 4–8 steps. Split into phases if >10.
 - Each step answers: *what*, *why now*, *done when*.
-- Explicitly capture happy path, dependencies, and key risks/fallbacks.
 
-**Architecture trade-off checkpoint** — if the task involves a structural decision (e.g., new module vs extending existing, sync vs async, REST vs event-driven), surface it explicitly:
-- State the 2–3 viable approaches and the key trade-offs (complexity, performance, coupling).
-- Pick one and document the reason.
-- Do not leave architecture decisions implicit inside a step description.
+**Impact checkpoint** *(modify-existing-code only)*:
+- `get_blast_radius` on the main symbol/module being changed.
+- `check_rename_safe` before proposing any rename of an exported/public symbol.
+- Wide downstream impact → split into smaller phases or add rollback steps.
 
-**Impact checkpoint for modify-existing-code tasks** — before finalizing the step order:
-- Use `get_blast_radius` on the main symbol/module being changed when the plan alters an existing public function, service boundary, or shared module.
-- Use `check_rename_safe` before proposing any rename step for an exported/public symbol.
-- If either call reveals wide downstream impact, split the plan into smaller phases or add explicit rollback / verification steps.
-
-**Deploy safety checkpoint** — after decomposing steps, scan the plan for the following patterns and annotate accordingly:
-
-(a) **Feature flags** — steps that add new routes, endpoints, or user-facing UI:
-  - Mark as: `⚠️ consider feature flag: new behavior reachable in production without explicit enable`
-  - Only flag steps with new user-visible behavior — not internal refactors.
-
-(b) **Migration ordering** — steps that include DB schema changes (new table, column, index, constraint modification):
-  - **Additive migrations** (add column, add table): run **before** app deploy — document as a step dependency note.
-  - **Destructive migrations** (drop column, alter type): run **after** old code is fully removed — document as a step dependency note.
-  - Label the migration step with: `⚠️ deploy order: [run before / run after] app deploy`
-
-(c) **External dependencies** — steps that add new external service calls, queues, or third-party APIs:
-  - Mark as: `⚠️ verify availability in target environment before deploy`
-
-Document any flags found under the plan's `## Risks` section. If no patterns match, skip this checkpoint silently — do not add empty sections.
+**Deploy safety** — annotate any step that matches:
+- New routes/endpoints → `⚠️ consider feature flag`
+- DB schema changes → `⚠️ deploy order: [before / after] app deploy`
+- New external service calls → `⚠️ verify availability in target environment`
 
 ---
 
-### Step 3 — Identify unknowns
+### Step 5 — Identify unknowns
 
-Flag anything that must be resolved before or during execution:
+Flag anything unresolved before handing off the plan:
 
-- **Docs needed**: library/API behavior that needs verification → mark as `b-docs` call.
-- **Research needed**: tool or approach comparison → mark as `b-research` call.
-- **Decisions needed**: choices that depend on user preference or business logic.
-- **Assumptions**: things the plan assumes to be true — state them explicitly.
+- **Docs needed**: library/API behavior not yet verified.
+- **Research needed**: tool or approach comparison still open.
+- **Decisions needed**: choices that require user input.
+- **Assumptions**: things the plan assumes but hasn't confirmed.
 
-If a "Docs needed" unknown affects plan decisions (e.g., "does BullMQ support X?"):
-- **Simple lookup** (single method, single config option, yes/no capability check) → call `resolve-library-id` then `query-docs` directly with the specific question. Append `→ Confirmed: [finding]`. Faster than invoking b-docs as a subagent.
-- **Complex lookup** (multi-area, version comparison, migration path) → invoke `b-docs` as before.
-Do not defer verifiable library assumptions to Session 2.
+**Resolve inline when cheap:**
+- Single library method / yes-no capability → call `resolve-library-id` + `query-docs`. Append `→ Confirmed: [finding]`.
+- 2-option quick comparison → call `brave_web_search`, resolve inline.
+- Complex or multi-source → delegate to b-research (mark as Unknown, don't block the plan).
 
-If the plan has open tool/approach decisions (`compare`, `decide between`, `which library`, `evaluate`, or `?`):
-- **Quick comparison** (2 options, single criterion) → call `brave_web_search` with a focused query (e.g. `"BullMQ vs Agenda.js reliability comparison"`) and resolve inline. Append findings to Unknowns.
-- **Deep comparison** (multiple criteria, performance benchmarks, multi-source) → invoke `b-research` as before.
-Do not defer tool selection to execution.
-
-An unresolved unknown is a risk. Surface it now, not halfway through implementation.
+An unresolved unknown is a risk. Name it now.
 
 ---
 
-### Step 4 — Write plan to current project root
+### Step 6 — Write plan
 
-Write the plan to `.opencode/b-plans/[task-slug].md` in the **current root project only**.
+Write to `.opencode/b-plans/[task-slug].md` in the **current project root only**.
 
-- `task-slug` = kebab-case of the task name, e.g. `add-retry-logic`, `refactor-auth-module`.
-- Always resolve the active working tree / current project root first, then write under `<current-project-root>/.opencode/b-plans/`.
-- Never write plan files to the user home directory, a parent workspace folder, another repo, or any shared/global directory.
-- Create `.opencode/b-plans/` inside the current project root if it doesn't exist.
-- Show the exact saved path to the user after writing.
+- `task-slug` = kebab-case, e.g. `add-retry-logic`, `refactor-auth-module`.
+- Create `.opencode/b-plans/` if it doesn't exist.
+- Show the exact saved path after writing.
 
-Then present a short summary in chat (scope + step count) and ask for confirmation.
-
-If the user requests changes → update the file, then confirm again.
-If the user confirms → do NOT execute in this session. Instead, print:
-
-```
-✅ Plan saved to .opencode/b-plans/[task-slug].md
-
-To execute: open a new session and run:
-  execute plan from .opencode/b-plans/[task-slug].md
-```
+Present a short summary (scope + step count) and ask for confirmation. Update and re-confirm if the user requests changes.
 
 ---
 
 ## Plan file format
 
-Language: always English — write plan files in English regardless of the user's query language.
+Always English, regardless of the user's query language.
 
 ```markdown
 # Plan: [task name]
 
-**Scope**: [one sentence — what this plan covers]
+**Scope**: [one sentence]
 **End state**: [what "done" looks like]
 **Created**: [date]
-**Issue**: [URL, ticket ID, or omit this line entirely if not applicable]
+**Issue**: [URL, ticket ID, or omit entirely]
+
+## Feasibility *(only if assessed in Step 1)*
+**Effort**: [S/M/L/XL/XXL]
+**Blockers**: [none / description]
+**Assumptions confirmed**: [list]
+
+## Decision *(only if multiple approaches were evaluated)*
+**Chosen approach**: [what was selected]
+**Alternatives rejected**: [option — reason]; [option — reason]
+**Why**: [1–2 sentence rationale]
 
 ---
 
@@ -223,11 +192,7 @@ Language: always English — write plan files in English regardless of the user'
   - Done when: ...
 
 - [ ] 2. [Step name]
-  - What: ...
-  - Why now: ...
-  - Done when: ...
-
-...
+  ...
 
 ## Dependencies
 - Step 3 requires Step 1 to be complete
@@ -237,50 +202,20 @@ Language: always English — write plan files in English regardless of the user'
 - [Risk]: [mitigation or fallback]
 
 ## Unknowns *(resolve before starting)*
-- Need b-docs: [library] — [what to verify]
+- Need b-research: [topic] — [what to verify]
 - Need decision: [question for user]
 - Assuming: [assumption that may not hold]
-
-## Feasibility *(optional — only if Step 0 was run)*
-**Effort**: [S/M/L/XL/XXL]
-**Blockers**: [none / description]
-**Assumptions confirmed**: [list]
-
-## Last Gate Failure
-<!-- populated by b-execute-plan when b-gate fails -->
-
-## Review Feedback
-<!-- populated by b-execute-plan when b-review returns NEEDS FIXES -->
 ```
-
-## Execution (in a new session)
-
-Plan files are always in English. When a new session opens, run: `execute plan from .opencode/b-plans/[file].md` — b-execute-plan orchestrates the full pipeline automatically with state tracking and rollback support.
-
-Pipeline overview (b-execute-plan handles all of this):
-
-0. **Pre-execution** *(conditional)*: if plan modifies existing code and no `## Context` section exists → extract file paths from plan Steps, run `b-analyze` scoped to only those paths, append as `## Context`. Skip if greenfield or context already present.
-1. **Per implementation step** → invoke `@b-tdd [plan-file]:[N]` (single-step mode: runs exactly step N, checks it off, returns control). b-tdd enforces Iron Law + RGR per step.
-2. **After all implementation steps** → invoke `@b-gate` (no args — runs on full working tree).
-3. **After b-gate passes** → invoke `@b-review [plan-file]` (passes plan as requirements baseline).
-4. **After READY FOR PR** → invoke `@b-commit`.
-5. **Non-production steps** (config, docs, delete, migrate, rename): perform manually, signal `done` — no agent invoked.
-6. **On step failure**: b-execute-plan writes `[❌] N — reason`, checks `git diff --stat` for partial changes, offers `git checkout -- .` rollback, blocks dependent steps from running.
-7. **On NEEDS FIXES from b-review**: b-execute-plan verifies real code changes via `git diff HEAD --stat` before resetting b-gate checkpoint — never resets on verbal signal alone.
-
-Session step count is derived from the file — each step runs via subagent so the main session stays token-light throughout execution.
 
 ---
 
 ## Rules
 
-- Always write to `.opencode/b-plans/` — never output the plan only in chat for non-trivial tasks.
-- Always write plan files in English — regardless of the user's query language.
-- Never execute in the same session as planning — always save to a plan file and open a new session with b-execute-plan.
+- Always write to `.opencode/b-plans/` — never leave the plan only in chat.
+- Always write plan files in English.
+- Do not implement in the same session as planning.
 - Steps must be ordered by dependency — wrong order causes cascading failures.
-- Keep steps atomic — one clear action per step, not "implement the whole service layer.".
-- If a step requires a b-docs or b-research call, mark it explicitly in the Unknowns section.
-- Surface risks and assumptions proactively — a wrong assumption found at Step 1 is free; found at Step 7 it costs a rewrite.
-- If the task turns out to require 10+ steps, split it into phases — one plan file per phase.
-- During execution, check off steps as completed and update the file in real time.
-- Never trigger destructive git commands — no `git push`, `git pull`, `git commit`, `git reset`, `git revert`, `git clean -f`, `git checkout -- <file>`, or `git branch -D`. If a commit is needed after completing work, delegate to b-commit.
+- Keep steps atomic — one clear action per step.
+- Surface risks and assumptions proactively.
+- Split into phases if 10+ steps.
+- Never trigger destructive git commands.
