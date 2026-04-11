@@ -8,7 +8,7 @@ description: >
   Unlike b-debug (fix broken) or b-research (lookup info), b-plan owns the decision of
   what to build and in what order.
 mode: primary
-model: opencode/minimax-m2.5-free
+model: opencode/claude-haiku-4-5-20251001
 ---
 
 # b-plan
