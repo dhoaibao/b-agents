@@ -7,8 +7,11 @@ description: >
   or the task spans more than 2 files or has unclear scope.
   Unlike b-debug (fix broken) or b-research (lookup info), b-plan owns the decision of
   what to build and in what order.
-mode: primary
-model: opencode/minimax-m2.5-free
+mode: all
+model: opencode-go/mimo-v2-pro
+permission:
+  edit: ask
+  bash: ask
 ---
 
 # b-plan

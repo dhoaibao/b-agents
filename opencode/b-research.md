@@ -5,8 +5,11 @@ description: >
   "research", "tìm hiểu", "deep dive", "so sánh", "tổng hợp", "how to use X", "cách dùng",
   "tra cứu", "does X support Y", or needs library API docs, comparisons, or reports.
   Covers both quick library lookups (Context7-first) and full multi-source research.
-mode: primary
-model: opencode/minimax-m2.5-free
+mode: all
+model: opencode-go/kimi-k2.5
+permission:
+  edit: deny
+  bash: deny
 ---
 
 

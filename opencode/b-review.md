@@ -1,8 +1,15 @@
 ---
 name: b-review
 description: Pre-PR code review — verify logic correctness, requirements fulfillment, edge case coverage, and test adequacy before opening a pull request. Use when user says "review before PR", "kiểm tra logic", or after implementation is done.
-mode: primary
+mode: all
 model: github-copilot/gpt-5.3-codex
+permission:
+  edit: deny
+  bash:
+    "*": deny
+    "git diff*": allow
+    "git log*": allow
+    "git status*": allow
 ---
 
 

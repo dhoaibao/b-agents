@@ -22,6 +22,8 @@ b-debug (any time something breaks)
 
 ## Invoking agents
 
+All agents support `mode: all` — invoke via **Tab** to cycle through primary agents, or **@ mention** as a subagent:
+
 ```
 @b-plan add rate limiting to the API
 @b-research how to use Prisma transactions
