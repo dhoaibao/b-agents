@@ -8,7 +8,7 @@ description: >
   Unlike b-debug (fix broken) or b-research (lookup info), b-plan owns the decision of
   what to build and in what order.
 mode: all
-model: opencode-go/mimo-v2-pro
+model: github-copilot/claude-sonnet-4-6
 permission:
   edit: ask
   bash: ask
