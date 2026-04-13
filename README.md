@@ -1,6 +1,6 @@
 # b-agents
 
-A lean 4-agent suite for **OpenCode**.
+A lean 4-agent suite for **OpenCode** subagents.
 
 ## Install & Update
 
@@ -14,7 +14,7 @@ Then **restart OpenCode** to load the agents.
 
 ## Overview
 
-Four agents covering the full development cycle:
+Four subagents covering the full development cycle:
 
 | Agent | When to use |
 |---|---|
@@ -25,9 +25,9 @@ Four agents covering the full development cycle:
 
 **Typical flow:**
 ```
-b-plan → [implement manually] → b-review → commit
-b-research  (any time you need docs or comparisons)
-b-debug     (any time something breaks)
+@b-plan [task] → [implement manually] → @b-review → commit
+@b-research [question]  (any time you need docs or comparisons)
+@b-debug [symptom]      (any time something breaks)
 ```
 
 See [REFERENCE.md](REFERENCE.md) for full details — triggers, output format, rules, and agent distinctions.

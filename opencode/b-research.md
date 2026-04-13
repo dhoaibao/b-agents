@@ -5,11 +5,8 @@ description: >
   "research", "tìm hiểu", "deep dive", "so sánh", "tổng hợp", "how to use X", "cách dùng",
   "tra cứu", "does X support Y", or needs library API docs, comparisons, or reports.
   Covers both quick library lookups (Context7-first) and full multi-source research.
-mode: all
+mode: subagent
 model: github-copilot/gpt-5.4
-permission:
-  edit: deny
-  bash: deny
 ---
 
 

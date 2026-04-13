@@ -22,7 +22,7 @@ b-debug (any time something breaks)
 
 ## Invoking agents
 
-All agents support `mode: all` — invoke via **Tab** to cycle through primary agents, or **@ mention** as a subagent:
+All agents are configured with `mode: subagent` — invoke them via **@ mention**:
 
 ```
 @b-plan add rate limiting to the API

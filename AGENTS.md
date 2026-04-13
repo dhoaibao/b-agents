@@ -121,7 +121,7 @@ All agents live in `opencode/b-[name].md`. When changing agent files:
 ---
 name: b-[name]
 description: [one-line, trigger-focused]
-mode: [primary for orchestrator agents / subagent for all others]
+mode: subagent
 model: [configured model]
 ---
 

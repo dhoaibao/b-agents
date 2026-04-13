@@ -138,38 +138,38 @@ Logic findings → Requirements coverage table → Edge cases / test adequacy �
 
 ### Standard feature flow
 ```
-1. b-plan: [task]
-2. b-research: [library]     (if needed before implementing)
+1. @b-plan [task]
+2. @b-research [library]     (if needed before implementing)
 3. [implement manually, step by step]
-4. b-review: [task]
+4. @b-review [task]
 5. commit
 ```
 
 ### Debug flow
 ```
-b-debug: [symptom + expected behavior]
+@b-debug [symptom + expected behavior]
 ```
 
 ### Before touching unfamiliar code
 ```
-b-plan: [task]    (b-plan scans existing code as part of planning)
+@b-plan [task]    (b-plan scans existing code as part of planning)
 ```
 
 ### Library choice / comparison
 ```
-b-research: compare [A] vs [B] for [use case]
+@b-research compare [A] vs [B] for [use case]
 ```
 
 ### Known library, API uncertain
 ```
-b-research: [library] — [feature]
+@b-research [library] — [feature]
 ```
 
 ---
 
 ## Trigger tips
 
-- Prefix with agent name: `b-plan: ...`, `b-debug: ...`, `b-review`, etc.
+- Invoke as subagents: `@b-plan ...`, `@b-debug ...`, `@b-review`, etc.
 - Use explicit intent words: `plan`, `debug`, `review`, `research`.
 - Mention complexity when relevant: multi-file, unfamiliar module, unclear root cause.
 
@@ -179,11 +179,11 @@ b-research: [library] — [feature]
 
 ```
 b-plan ──────────────── writes ─────────────────► plan file in .opencode/b-plans/
-       └── unknown library/approach ────────────► b-research (before or during planning)
+       └── unknown library/approach ────────────► @b-research (before or during planning)
 
 b-review ────────────── READY FOR PR ───────────► commit
-         └──────────── NEEDS FIXES ─────────────► fix → b-review again
+         └──────────── NEEDS FIXES ─────────────► fix → @b-review again
 
 b-debug ─────────────── bug found during impl ──► fix inline
-        └──────────── fix introduces new code ──► b-review (optional)
+        └──────────── fix introduces new code ──► @b-review (optional)
 ```

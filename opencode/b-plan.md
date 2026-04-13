@@ -7,11 +7,8 @@ description: >
   or the task spans more than 2 files or has unclear scope.
   Unlike b-debug (fix broken) or b-research (lookup info), b-plan owns the decision of
   what to build and in what order.
-mode: all
+mode: subagent
 model: github-copilot/claude-sonnet-4-6
-permission:
-  edit: ask
-  bash: ask
 ---
 
 # b-plan
