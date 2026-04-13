@@ -69,14 +69,17 @@ When jcodemunch is connected: **never** use Glob, Grep, or Read to explore or un
 **jcodemunch preflight** — run at the start of any agent that needs to understand existing code:
 
 1. `resolve_repo(path="<absolute project root>")` — look up the cached repo map.
-   - If a repo identifier is returned: reuse it. Verify index health with `get_repo_outline(repo=<id>)`.
+   - If a repo identifier is returned: **do not trust it yet**. Verify index health with `get_repo_outline(repo=<id>)`.
    - **Check `is_stale` flag**: if `is_stale: true` → re-index with `index_folder(path=<root>, incremental=true, use_ai_summaries=false)`.
-   - After re-indexing due to staleness, call `get_repo_outline(repo=<id>)` again before proceeding.
-   - If outline shows implausibly low coverage (`file_count = 0`, `symbol_count = 0`) → re-index.
+   - **Guard against ghost indexes**: if the resolved repo reports code but the current workspace appears empty, treat the cache as invalid. Re-index immediately; if needed, invalidate the cached repo first.
+   - **Guard against empty-folder false positives**: if the current folder has no real source files, treat it as an empty workspace even if `resolve_repo` or `get_repo_outline` returns prior symbols/files from cache.
+   - After re-indexing due to staleness or ghost data, call `get_repo_outline(repo=<id>)` again before proceeding.
+   - If outline shows implausibly low or contradictory coverage (`file_count = 0`, `symbol_count = 0`, or counts that clearly disagree with the current filesystem) → re-index.
    - If no match: call `index_folder(path=<root>, incremental=true, use_ai_summaries=false)`.
-   - If re-index still returns `file_count = 0` → fall back to Glob/Grep/Read.
-2. `suggest_queries(repo=<id>)` — surface entry points, key symbols, and language distribution.
-3. `get_ranked_context(repo=<id>, query="<agent-specific task query>", token_budget=4000)` — pack the most relevant symbols/files into a bounded context window.
+   - If re-index still disagrees with the current filesystem, invalidate the cache and treat jcodemunch results as unreliable for this workspace.
+   - If the workspace is empty, or post-invalidation indexing still returns `file_count = 0`, do **not** infer code structure from cache; switch to filesystem-native checks and report the workspace as empty.
+2. `suggest_queries(repo=<id>)` — surface entry points, key symbols, and language distribution only after the index passes the validation above.
+3. `get_ranked_context(repo=<id>, query="<agent-specific task query>", token_budget=4000)` — pack the most relevant symbols/files into a bounded context window only after the index passes the validation above.
 
 **Read-order heuristic**:
 1. `search_symbols` / `search_text`
@@ -89,11 +92,14 @@ When jcodemunch is connected: **never** use Glob, Grep, or Read to explore or un
 - Batch symbol reads when possible (`get_symbol_source(symbol_ids[])`, `get_context_bundle`).
 - Use `search_text` for strings/config/errors; use `search_symbols` for code entities.
 
-**Session reuse**: if another agent already ran this preflight in this session, reuse the repo identifier — do not re-index.
+**Session reuse**: if another agent already ran this preflight in this session, reuse the repo identifier only if that earlier run explicitly confirmed the index matched the current filesystem. Otherwise, validate again before reuse.
 
 **Always use `incremental=true`**: ensures file deletion detection and reduces re-index time.
 
-**Fallback** *(only when jcodemunch is unavailable or returns `file_count = 0`)*: use `Glob` + `Grep` + `Read`. Always note: "⚠️ jcodemunch unavailable — analysis based on Glob/Grep/Read; cross-file tracking incomplete."
+**Fallback** *(only when jcodemunch is unavailable, the workspace is empty, or the cache/index remains contradictory after revalidation)*: use `Glob` + `Grep` + `Read`. Always note one of:
+- "⚠️ jcodemunch unavailable — analysis based on Glob/Grep/Read; cross-file tracking incomplete."
+- "⚠️ jcodemunch cache/index contradicted the current filesystem — treated as unreliable for this workspace."
+- "⚠️ workspace is empty — no code structure inferred from cached jcodemunch data."
 
 ---
 

@@ -15,6 +15,7 @@ surface risks, and produce an execution-ready plan file.
 - Uses `sequential-thinking` to decompose work and rank approaches.
 - For existing-code tasks, uses jcodemunch preflight plus targeted structure reads.
 - Re-indexes first when a reused jcodemunch index is stale.
+- Rejects reused jcodemunch context when cached index data contradicts the current filesystem or the workspace is actually empty.
 - Uses `get_file_outline` before opening source, then reads only the exact symbols needed.
 - Uses sequential-thinking for both approach selection and ordered execution steps, with action-oriented output.
 - Evaluates multiple approaches and documents the chosen one in `## Decision`.
@@ -78,6 +79,7 @@ Systematic, hypothesis-driven debugging with full-loop execution by default.
 **Core behavior**
 - Uses jcodemunch to map execution path, references, blast radius, and suspicious symbols.
 - Reuses the existing repo identifier, but still re-indexes first when the cached index is stale.
+- Treats cached jcodemunch results as invalid when they describe code that is not present in the current filesystem.
 - Narrows with `get_file_outline` before opening full symbol source where possible.
 - Uses `sequential-thinking` to rank hypotheses.
 - Requires each hypothesis to include evidence for/against and the cheapest verification step.
@@ -115,6 +117,7 @@ observability on new entry points.
 - Reads git diff and builds requirements baseline from plan file, `$ARGUMENTS`, or user clarification.
 - Uses jcodemunch to prioritize review depth by changed symbols and blast radius.
 - Re-indexes first when the reused jcodemunch index is stale before reviewing changed symbols.
+- Refuses to review against ghost cached symbols when the current workspace is empty or the index disagrees with the filesystem.
 - Reviews changed files outline-first, then opens only high-risk symbols/source paths.
 - Uses `sequential-thinking` only when blocker/suggestion classification is genuinely ambiguous, not by default.
 - Always checks **injection vectors**, even on very small diffs.

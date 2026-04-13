@@ -3,6 +3,7 @@
 A lean 4-agent suite for **OpenCode** subagents.
 
 The suite is optimized around **symbol-first code analysis (jCodeMunch)** and **selective structured reasoning (Sequential Thinking only when ambiguity or trade-offs justify it)**.
+It also hardens jCodeMunch preflight against **stale cached indexes** and **empty-folder false positives** before any agent trusts indexed code context.
 
 ## Install & Update
 
