@@ -8,7 +8,7 @@ It uses Serena's best-practice flow: **activate project → symbol/file discover
 ## Install & Update
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-agents/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dhoaibao/b-skills/main/install.sh | bash
 ```
 
 Then **restart Claude Code** to load the skills.
