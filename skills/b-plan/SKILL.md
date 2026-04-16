@@ -36,13 +36,13 @@ If `$ARGUMENTS` is provided, treat it as the task description — skip asking "w
 ## Tools required
 
 - `sequentialthinking` — from `sequential-thinking` MCP server (required for Steps 3–4: approach evaluation and decomposition).
-- `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_repo_outline`, `get_dependency_graph`, `get_file_outline`, `get_file_tree`, `get_blast_radius`, `check_rename_safe` — from `jcodemunch` MCP server *(required for modify-existing-code tasks; optional for pure greenfield)*.
+- `activate_project`, `check_onboarding_performed`, `onboarding`, `find_file`, `list_dir`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `search_for_pattern`, `read_file`, `rename_symbol` — from `serena` MCP server *(required for modify-existing-code tasks; optional for pure greenfield)*.
 - `resolve-library-id`, `query-docs` — from `context7` MCP server *(optional, for inline library verification in Step 5 — simple lookups only)*.
 - `brave_web_search` — from `brave-search` MCP server *(optional, for tool/approach comparison in Step 5 — simple lookups only)*.
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for scraping Issue/ticket URL in Step 1)*.
 
 If sequential-thinking is unavailable: reason through plans and trade-offs inline with explicit numbered steps. Format fallback as: `Goal → Constraints → Options → Decision → Ordered steps → Open questions`.
-If jcodemunch is unavailable, or re-indexing still returns `file_count = 0`: use Glob/Read to inspect key files. Note: "⚠️ jcodemunch unavailable — cross-file tracking incomplete."
+If Serena is unavailable: use Glob/Read to inspect key files. Note: "⚠️ Serena unavailable — cross-file tracking incomplete."
 If context7 or brave-search is unavailable: delegate to /b-research.
 If firecrawl is unavailable: store the Issue URL as a plain reference without scraping.
 
@@ -66,7 +66,7 @@ Confirm what is being built before scanning any code.
 - Ask once. If still unclear, ask one focused follow-up. Don't loop.
 
 **Feasibility check** *(run inline when scope is non-trivial — not a separate step)*:
-- Does the current architecture support this? Use `get_repo_outline` + `get_dependency_graph` from jcodemunch (or Glob/Read if unavailable).
+- Does the current architecture support this? Use Serena symbol/file discovery (`list_dir`, `find_file`, `find_symbol`, `find_referencing_symbols`) or Glob/Read if unavailable.
 - Any blockers? (Missing infrastructure, incompatible dependencies, architectural gaps.)
 - Effort estimate: S (hours) / M (1–2 days) / L (3–5 days) / XL (1–2 weeks) / XXL (weeks+).
 - If blockers found: state clearly. If no workaround exists, do not proceed until resolved.
@@ -85,13 +85,14 @@ Confirm what is being built before scanning any code.
 
 ### Step 2 — Scan existing code *(existing-code tasks only)*
 
-Use jcodemunch to understand what already exists before planning:
+Use Serena to understand what already exists before planning:
 
-- Run the standard preflight (see `~/.claude/CLAUDE.md` § jcodemunch preflight) with query = "[requested change description]". If the reused index is stale, re-index first, then continue.
-- `get_file_tree(path_prefix="src/")` — scoped directory view for the affected area.
-- `get_repo_outline` — overall structure, module boundaries.
-- `get_file_outline(file_paths=[...])` — batch-inspect files the plan will touch.
-- Only if outlines are insufficient: `get_symbol_source` or `get_context_bundle` for the exact symbols on the proposed execution path.
+- Activate the current project first (`activate_project`); if onboarding has not been performed, run `check_onboarding_performed` then `onboarding`.
+- `list_dir` / `find_file` — scoped directory view for the affected area.
+- `find_symbol` — locate the main symbols involved in the requested change.
+- `get_symbols_overview` — inspect the files the plan will touch.
+- `find_referencing_symbols` — confirm which callers or dependent symbols are affected.
+- Only if overviews are insufficient: `read_file` for the exact file sections on the proposed execution path.
 
 **Goal**: reference real paths and symbols. A plan that references wrong file names or non-existent functions fails at execution.
 
@@ -121,8 +122,8 @@ Use `sequentialthinking` to break the chosen approach into atomic, ordered steps
 - Ask for output in this shape: `Goal`, `Constraints`, `Ordered steps`, `Dependencies`, `Open questions`, `First action`.
 
 **Impact checkpoint** *(modify-existing-code only)*:
-- `get_blast_radius` on the main symbol/module being changed.
-- `check_rename_safe` before proposing any rename of an exported/public symbol.
+- `find_referencing_symbols` on the main symbol/module being changed.
+- `rename_symbol` only when the plan explicitly includes a rename of an exported/public symbol; call out broad references as migration risk.
 - Wide downstream impact → split into smaller phases or add rollback steps.
 
 **Deploy safety** — annotate any step that matches:

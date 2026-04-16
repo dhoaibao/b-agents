@@ -37,13 +37,13 @@ requirements baseline for Step 2.
 
 - `Bash` — to read git diff and changed file list.
 - `sequentialthinking` — from `sequential-thinking` MCP server — structured review reasoning.
-- `resolve_repo`, `suggest_queries`, `get_ranked_context`, `get_changed_symbols`, `get_blast_radius`, `get_impact_preview`, `get_file_outline`, `get_symbol_source`, `get_context_bundle`, `find_references` — from `jcodemunch` MCP server *(required when the repo is locally indexed or indexable; use fallback only if jcodemunch is unavailable or indexing fails)*
+- `activate_project`, `check_onboarding_performed`, `onboarding`, `find_symbol`, `get_symbols_overview`, `find_referencing_symbols`, `search_for_pattern`, `read_file` — from `serena` MCP server *(preferred for symbol-aware review; use fallback only if Serena is unavailable)*
 - `firecrawl_scrape` — from `firecrawl` MCP server *(optional, for fetching issue/ticket URL content when an `**Issue**:` URL is present in the plan file)*
 - `resolve-library-id` + `query-docs` — from `context7` MCP server *(optional, for verifying library API calls in changed code — catches wrong method signatures, deprecated APIs, misused parameters)*
 - `brave_web_search` — from `brave-search` MCP server *(optional, for CVE/known-vulnerability lookup when a risky security pattern is found in changed code)*
 
 If sequential-thinking is unavailable: reason through review dimensions inline, document each explicitly. Format fallback as: `Finding → Severity → Why blocker/not blocker → Suggested action`.
-If jcodemunch is unavailable, or re-indexing still returns `file_count = 0`: use Read tool to inspect changed files directly. Note: "⚠️ jcodemunch unavailable — blast-radius analysis unavailable."
+If Serena is unavailable: use Read tool to inspect changed files directly. Note: "⚠️ Serena unavailable — symbol-aware impact analysis unavailable."
 If firecrawl is unavailable: skip Issue URL fetch; display ticket ID or URL as a context reference only.
 If context7 is unavailable: skip API verification step; note any suspicious library calls manually.
 If brave-search is unavailable: skip CVE lookup; flag the pattern as a manual security review item.
@@ -104,11 +104,11 @@ The review is only as good as the requirements baseline. Do not review without i
 
 ### Step 3 — Logic correctness review
 
-Run the standard jcodemunch preflight (see `~/.claude/CLAUDE.md` § jcodemunch preflight) with query = "[diff scope + requirements baseline summary]". If the reused index is stale, re-index first, then continue. Call `get_changed_symbols` to map the diff to named symbols, `get_blast_radius` on the top changed symbols to understand downstream impact, and `get_impact_preview` when a changed symbol sits on a service boundary or shared helper. Use `get_file_outline` on the changed files before opening source, then `get_symbol_source` / `get_context_bundle` only for the highest-risk symbols. Add `find_references` when the diff changes a shared helper or exported boundary. If jcodemunch is unavailable, or re-indexing still returns `file_count = 0`, fall back to direct Read on changed files. Always note: "⚠️ jcodemunch unavailable — blast-radius analysis unavailable."
+Activate the current project first. If onboarding has not been performed, run onboarding. Then use `find_symbol` to map changed names to real symbols, `find_referencing_symbols` on the top changed symbols to understand downstream impact, `get_symbols_overview` on the changed files before opening source, and `read_file` only for the highest-risk symbol bodies or file sections. Add `search_for_pattern` when the diff changes a shared helper, exported boundary, or repeated pattern. Do not jump straight from `git diff` to full-file reads when Serena can narrow first. If Serena is unavailable, fall back to direct Read on changed files. Always note: "⚠️ Serena unavailable — symbol-aware impact analysis unavailable."
 
-**Impact-first review rule**: when `get_changed_symbols` returns named symbols, prioritize review depth on (a) symbols with the largest blast radius, (b) symbols at service boundaries, and (c) symbols implementing explicit requirements from Step 2. Raw line-count alone should not determine review depth.
+**Impact-first review rule**: when Serena identifies named symbols and referencing call sites, prioritize review depth on (a) symbols with the broadest references, (b) symbols at service boundaries, and (c) symbols implementing explicit requirements from Step 2. Raw line-count alone should not determine review depth.
 
-Read the changed code (prefer `get_file_outline` → `get_symbol_source`; use Read only as fallback) and check:
+Read the changed code (prefer `get_symbols_overview` → targeted `read_file`; use Read only as fallback) and check:
 
 **Control flow**
 - Are all branches of conditionals handled? (if/else, switch cases, error paths)

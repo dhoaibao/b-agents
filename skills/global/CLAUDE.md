@@ -40,66 +40,68 @@ Type `/` followed by the skill name in Claude Code:
 
 ---
 
-### Code intelligence — jcodemunch (REQUIRED when available)
+### Code intelligence — Serena MCP (REQUIRED when available)
 
-When jcodemunch is connected: **never** use Glob, Grep, or Read to explore or understand a codebase.
+When Serena is connected: **never** use Glob, Grep, or Read as your first move to understand a codebase.
 
-**Working style rule**: use jcodemunch to narrow first, then read narrowly.
-- Start with repo/file/symbol discovery tools.
-- Prefer `get_file_outline` before `get_symbol_source`.
-- Prefer `get_symbol_source` before `get_file_content`.
-- Use `get_file_content` only when symbol boundaries are insufficient (file-level state, long procedural flow, config/text files, or exact line-range review).
-- Before risky edits, run impact tools (`find_references`, `get_blast_radius`, `get_impact_preview`, `plan_refactoring`) before reading more code.
+**Working style rule**: use Serena to activate the project, narrow by symbol/file, then read narrowly.
+- Start with `activate_project` for the current workspace.
+- If onboarding has not been performed, run `check_onboarding_performed` and `onboarding` once.
+- Prefer `find_symbol` before `get_symbols_overview`.
+- Prefer `get_symbols_overview` before `read_file`.
+- Use `find_referencing_symbols` before broad manual searches when following impact across files.
+- Use `search_for_pattern` for exact strings, error text, or repeated implementation patterns.
+- For edits, prefer symbol-aware tools first: `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, then `replace_content` only when symbolic edits are insufficient.
 
-**Mandatory substitution table — no exceptions when jcodemunch is available:**
+**Mandatory substitution table — no exceptions when Serena is available:**
 
-| Native tool / action | ✅ MUST use instead (jcodemunch) |
+| Native tool / action | ✅ MUST use instead (Serena) |
 |---|---|
-| `Glob("**/*.ts")` to find files | `get_file_tree(repo, path_prefix=...)` |
-| `Read("src/foo.ts")` to read a file | `get_file_content(repo, "src/foo.ts")` |
-| `Grep("functionName")` to find a symbol | `search_symbols(repo, "functionName")` |
-| `Grep("import.*foo")` to trace imports | `get_dependency_graph(repo, file, direction="imports")` |
-| `Grep("foo(")` to find usages | `find_references(repo, "foo")` |
-| Manual dead-code tracing | `get_dead_code_v2(repo)` |
-| Reading file structure by hand | `get_repo_outline(repo)` |
-| Checking if a symbol is used | `check_references(repo, "symbolName")` |
-| Understanding a class hierarchy | `get_class_hierarchy(repo, "ClassName")` |
-| Finding related code | `get_related_symbols(repo, symbol_id)` |
+| `Glob("**/*.ts")` to find files | `find_file` / `list_dir` |
+| `Read("src/foo.ts")` to read a file | `get_symbols_overview` → `read_file` |
+| `Grep("functionName")` to find a symbol | `find_symbol` |
+| `Grep("import.*foo")` to trace usages | `find_referencing_symbols` |
+| `Grep("foo(")` to find call sites | `find_referencing_symbols` / `search_for_pattern` |
+| Reading file structure by hand | `get_symbols_overview` |
+| Checking if a symbol is used | `find_referencing_symbols` |
+| Searching for error strings/config keys | `search_for_pattern` |
+| Manual symbol-body edits | `replace_symbol_body` |
+| Manual rename across files | `rename_symbol` |
 
-**jcodemunch preflight** — run at the start of any skill that needs to understand existing code:
+**Serena preflight** — run at the start of any skill that needs to understand existing code:
 
-1. `resolve_repo(path="<absolute project root>")` — look up the cached repo map.
-   - If a repo identifier is returned: **do not trust it yet**. Verify index health with `get_repo_outline(repo=<id>)`.
-   - **Check `is_stale` flag**: if `is_stale: true` → re-index with `index_folder(path=<root>, incremental=true, use_ai_summaries=false)`.
-   - **Guard against ghost indexes**: if the resolved repo reports code but the current workspace appears empty, treat the cache as invalid. Re-index immediately; if needed, invalidate the cached repo first.
-   - **Guard against empty-folder false positives**: if the current folder has no real source files, treat it as an empty workspace even if `resolve_repo` or `get_repo_outline` returns prior symbols/files from cache.
-   - After re-indexing due to staleness or ghost data, call `get_repo_outline(repo=<id>)` again before proceeding.
-   - If outline shows implausibly low or contradictory coverage (`file_count = 0`, `symbol_count = 0`, or counts that clearly disagree with the current filesystem) → re-index.
-   - If no match: call `index_folder(path=<root>, incremental=true, use_ai_summaries=false)`.
-   - If re-index still disagrees with the current filesystem, invalidate the cache and treat jcodemunch results as unreliable for this workspace.
-   - If the workspace is empty, or post-invalidation indexing still returns `file_count = 0`, do **not** infer code structure from cache; switch to filesystem-native checks and report the workspace as empty.
-2. `suggest_queries(repo=<id>)` — surface entry points, key symbols, and language distribution only after the index passes the validation above.
-3. `get_ranked_context(repo=<id>, query="<skill-specific task query>", token_budget=4000)` — pack the most relevant symbols/files into a bounded context window only after the index passes the validation above.
+1. `activate_project` for the current workspace path.
+2. `check_onboarding_performed` — if onboarding is missing, run `onboarding` before deeper exploration.
+3. `get_current_config` when tool availability or context looks wrong.
+4. Start discovery with `find_symbol`, `find_file`, or `list_dir` based on the task.
+
+**Best-practice Serena workflow**:
+1. `activate_project`
+2. `check_onboarding_performed` → `onboarding` if needed
+3. `find_symbol` / `find_file` / `search_for_pattern`
+4. `get_symbols_overview`
+5. `find_referencing_symbols`
+6. `read_file` only for the exact symbol/file section still needed
+7. Edit with `replace_symbol_body` / `insert_before_symbol` / `insert_after_symbol` / `rename_symbol`
+8. Use `replace_content` only when Serena's symbolic tools cannot express the exact change safely
 
 **Read-order heuristic**:
-1. `search_symbols` / `search_text`
-2. `get_file_outline`
-3. `get_symbol_source` or `get_context_bundle`
-4. `get_file_content` only if still necessary
+1. `find_symbol` / `search_for_pattern`
+2. `get_symbols_overview`
+3. `find_referencing_symbols`
+4. `read_file` only if still necessary
 
 **Token-efficiency rule**:
 - Do not open full files by default.
-- Batch symbol reads when possible (`get_symbol_source(symbol_ids[])`, `get_context_bundle`).
-- Use `search_text` for strings/config/errors; use `search_symbols` for code entities.
+- Use symbol overview first, then only the exact symbol/file section you need.
+- Use `search_for_pattern` for strings/config/errors; use `find_symbol` for code entities.
 
-**Session reuse**: if another skill already ran this preflight in this session, reuse the repo identifier only if that earlier run explicitly confirmed the index matched the current filesystem. Otherwise, validate again before reuse.
+**Session reuse**: if Serena already activated the current project in this session, reuse that context only after confirming you are still in the same workspace.
 
-**Always use `incremental=true`**: ensures file deletion detection and reduces re-index time.
-
-**Fallback** *(only when jcodemunch is unavailable, the workspace is empty, or the cache/index remains contradictory after revalidation)*: use `Glob` + `Grep` + `Read`. Always note one of:
-- "⚠️ jcodemunch unavailable — analysis based on Glob/Grep/Read; cross-file tracking incomplete."
-- "⚠️ jcodemunch cache/index contradicted the current filesystem — treated as unreliable for this workspace."
-- "⚠️ workspace is empty — no code structure inferred from cached jcodemunch data."
+**Fallback** *(only when Serena is unavailable or the project cannot be activated cleanly)*: use `Glob` + `Grep` + `Read`. Always note one of:
+- "⚠️ Serena unavailable — analysis based on Glob/Grep/Read; cross-file tracking incomplete."
+- "⚠️ Serena project activation failed — falling back to filesystem-native checks."
+- "⚠️ workspace is empty — no code structure available for Serena analysis."
 
 ---
 
@@ -173,8 +175,9 @@ MCP toolset  >  specialized native tool  >  general native tool  >  Bash command
 
 | Task | 1st choice (MUST) | 2nd choice | Last resort |
 |---|---|---|---|
-| Read a source file | `jcodemunch:get_symbol_source` / `get_file_outline` | `jcodemunch:get_file_content` / `Read` tool | `cat` via Bash |
-| Find a function | `jcodemunch:search_symbols` | `Grep` tool | `grep` via Bash |
+| Read a source file | `serena:get_symbols_overview` / `read_file` | `Read` tool | `cat` via Bash |
+| Find a function | `serena:find_symbol` | `Grep` tool | `grep` via Bash |
+| Edit existing symbol | `serena:replace_symbol_body` / `insert_*` / `rename_symbol` | `apply_patch` | line-edit via shell |
 | Search the web | `brave_web_search` | `firecrawl_search` | `WebFetch` |
 | Scrape a URL | `firecrawl_scrape` | `WebFetch` | — |
 | Library API lookup | `context7:query-docs` | `firecrawl_scrape(docs URL)` | training knowledge (❌ avoid) |

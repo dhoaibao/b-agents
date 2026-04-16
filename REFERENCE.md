@@ -13,13 +13,13 @@ surface risks, and produce an execution-ready plan file.
 
 **Core behavior**
 - Uses `sequential-thinking` to decompose work and rank approaches.
-- For existing-code tasks, uses jcodemunch preflight plus targeted structure reads.
-- Re-indexes first when a reused jcodemunch index is stale.
-- Rejects reused jcodemunch context when cached index data contradicts the current filesystem or the workspace is actually empty.
-- Uses `get_file_outline` before opening source, then reads only the exact symbols needed.
+- For existing-code tasks, uses Serena project activation plus targeted symbol/file reads.
+- Activates the current project before scanning existing code.
+- Follows Serena's planning sequence: activate → discover → overview → references → narrow reads.
+- Uses `get_symbols_overview` before opening symbol bodies, then reads only the exact symbols needed.
 - Uses sequential-thinking for both approach selection and ordered execution steps, with action-oriented output.
 - Evaluates multiple approaches and documents the chosen one in `## Decision`.
-- Includes conditional **Step 0 feasibility gate** for uncertain or large-scope tasks.
+- Includes a feasibility gate for uncertain or large-scope tasks.
 - Adds deploy-safety annotations (feature flags, migration ordering, external dependencies).
 
 **Good triggers**
@@ -37,7 +37,7 @@ how should I approach refactoring the auth module?
 
 **Key rules**
 - Do not implement in the same session as planning.
-- Step 0 only confirms feasibility / blockers; it does not replace `/b-research` for deep unknowns.
+- The feasibility gate only confirms blockers and scope; it does not replace `/b-research` for deep unknowns.
 - All unresolved unknowns must be surfaced in the plan — never deferred silently.
 
 ---
@@ -77,10 +77,10 @@ tra cứu cách dùng thư viện Prisma
 Systematic, hypothesis-driven debugging with full-loop execution by default.
 
 **Core behavior**
-- Uses jcodemunch to map execution path, references, blast radius, and suspicious symbols.
-- Reuses the existing repo identifier, but still re-indexes first when the cached index is stale.
-- Treats cached jcodemunch results as invalid when they describe code that is not present in the current filesystem.
-- Narrows with `get_file_outline` before opening full symbol source where possible.
+- Uses Serena to map execution path, references, suspicious symbols, and exact files.
+- Activates the current project before tracing the code path.
+- Follows Serena's debugging sequence: activate → locate symbol → overview → references/patterns → narrow reads → symbolic fix.
+- Narrows with `get_symbols_overview` before opening full symbol source where possible.
 - Uses `sequential-thinking` to rank hypotheses.
 - Requires each hypothesis to include evidence for/against and the cheapest verification step.
 - Library error shortcut: web search for known issues before verifying hypotheses.
@@ -104,7 +104,7 @@ Symptoms → Code path → Ranked hypotheses → Root cause → Fix → Verifica
 
 **Key rules**
 - Never patch before root cause is explicitly confirmed.
-- After fixing, refresh changed-file index when jcodemunch is available.
+- After fixing, keep Serena-aware edits focused on the changed symbols/files only.
 
 ---
 
@@ -115,9 +115,9 @@ observability on new entry points.
 
 **Core behavior**
 - Reads git diff and builds requirements baseline from plan file, `$ARGUMENTS`, or user clarification.
-- Uses jcodemunch to prioritize review depth by changed symbols and blast radius.
-- Re-indexes first when the reused jcodemunch index is stale before reviewing changed symbols.
-- Refuses to review against ghost cached symbols when the current workspace is empty or the index disagrees with the filesystem.
+- Uses Serena to prioritize review depth by changed symbols, references, and affected files.
+- Activates the current project before reviewing changed symbols.
+- Follows Serena's review sequence: diff → symbol mapping → overview → references → narrow reads.
 - Reviews changed files outline-first, then opens only high-risk symbols/source paths.
 - Uses `sequential-thinking` only when blocker/suggestion classification is genuinely ambiguous, not by default.
 - Always checks **injection vectors**, even on very small diffs.

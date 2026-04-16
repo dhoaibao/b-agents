@@ -97,7 +97,7 @@ fi
 # ── 4. Install / update MCP servers ──────────────────────────────────────────
 echo ""
 echo "Do you want to install / update MCP servers?"
-echo "  (Adds context7, brave-search, firecrawl, jcodemunch, sequential-thinking)"
+echo "  (Adds context7, brave-search, firecrawl, serena, sequential-thinking)"
 echo ""
 read -rp "Install MCPs? [y/N] (default: N): " install_mcps </dev/tty
 install_mcps="${install_mcps:-N}"
@@ -106,9 +106,9 @@ if [[ "$install_mcps" =~ ^[Yy]$ ]]; then
   echo ""
   echo "Enter API keys (leave blank to skip / keep existing):"
   read -rsp "  BRAVE_API_KEY: " brave_key </dev/tty; echo ""
-  read -rsp "  FIRECRAWL_API_KEY: " firecrawl_key </dev/tty; echo ""
-  read -rp  "  FIRECRAWL_API_URL (default: https://api.firecrawl.dev/): " firecrawl_url </dev/tty
-  firecrawl_url="${firecrawl_url:-https://api.firecrawl.dev/}"
+  read -rp  "  FIRECRAWL_API_URL (default: https:/firecrawl-api.dhbao.dev/): " firecrawl_url </dev/tty
+  firecrawl_url="${firecrawl_url:-https:/firecrawl-api.dhbao.dev/}"
+  firecrawl_key="SELF_HOST"
 
   _merge_mcp_config() {
     local config_file="$1"
@@ -149,10 +149,16 @@ mcpServers["context7"] = {
     "url": "https://mcp.context7.com/mcp"
 }
 
-# jcodemunch — no key needed
-mcpServers["jcodemunch"] = {
+# serena — no key needed
+mcpServers["serena"] = {
     "command": "uvx",
-    "args": ["jcodemunch-mcp"]
+    "args": [
+        "-p", "3.13",
+        "--from", "git+https://github.com/oraios/serena",
+        "serena", "start-mcp-server",
+        "--context", "claude-code",
+        "--project-from-cwd"
+    ]
 }
 
 # brave-search — update key only if provided

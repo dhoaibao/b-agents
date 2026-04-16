@@ -39,19 +39,15 @@ If `$ARGUMENTS` explicitly limits scope to investigation-only, honor that limit 
 
 ## Tools required
 
-From `jcodemunch` MCP server:
-- `resolve_repo` — cached repo map lookup; reuse an existing repo identifier before indexing.
-- `suggest_queries` — auto-surface entry points and key symbols for unfamiliar codebases (use before Step 2 when codebase is new)
-- `get_ranked_context` — pack the most relevant execution-path symbols into a bounded context window before deeper tracing.
-- `get_context_bundle` — get full context from an entry point (file or function)
-- `find_references` — trace all callers and callees of a function.
-- `get_blast_radius` — understand what depends on a suspected module.
-- `get_impact_preview` — show transitive callers that would break if the suspected symbol is wrong or removed.
-- `get_symbol_source` — inspect a specific function or class in detail (supports single `symbol_id` or batch `symbol_ids[]`)
-- `get_related_symbols` — discover functions closely associated with a suspicious symbol.
-- `get_symbol_diff` — detect regressions by diffing a symbol between two indexed states.
-- `search_text` — search for error strings or regex patterns across the codebase.
-- `index_file` — re-index a single changed file after applying a fix (keeps jcodemunch index fresh)
+From `serena` MCP server:
+- `activate_project` — activate the current project before tracing code.
+- `check_onboarding_performed` / `onboarding` — initialize project knowledge when needed.
+- `find_symbol` — locate the entry point or suspicious symbol.
+- `get_symbols_overview` — inspect file structure before opening bodies.
+- `find_referencing_symbols` — trace callers/usages of a function or class.
+- `search_for_pattern` — search for exact error strings or suspicious patterns across the codebase.
+- `read_file` — inspect the exact file chunk when symbolic tools are insufficient.
+- `replace_symbol_body`, `replace_content`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol` — apply the minimal fix once root cause is confirmed.
 
 From `sequential-thinking` MCP server:
 - `sequentialthinking` — structured reasoning to form and rank hypotheses.
@@ -66,11 +62,11 @@ From `firecrawl` MCP server *(optional)*:
 - `firecrawl_scrape` — scrape full content of relevant GitHub issue pages, Stack Overflow answers, or changelogs found via web search.
 - `firecrawl_map` — map all URLs on a site when `firecrawl_scrape` returns empty content (JS-rendered or incorrect URL); use to discover the correct URL before retrying scrape.
 
-If jcodemunch is unavailable, or re-indexing still returns `file_count = 0`: use Glob/Grep/Read to map files manually, proceed with Steps 2.1–2.4. Always note: "⚠️ jcodemunch unavailable — analysis based on Glob/Grep/Read; cross-file tracking incomplete."
+If Serena is unavailable: use Glob/Grep/Read to map files manually, proceed with Steps 2.1–2.4. Always note: "⚠️ Serena unavailable — analysis based on Glob/Grep/Read; cross-file tracking incomplete."
 If sequential-thinking is unavailable: reason through hypotheses inline, document steps explicitly in response. Format fallback as: `Hypothesis N → Evidence for → Evidence against → Cheapest verification → Confirmed/Rejected`.
 If context7 is unavailable: invoke /b-research for library API questions instead.
 
-Graceful degradation: ✅ Possible — if jcodemunch unavailable, use Glob/Grep/Read for file analysis. Quality is reduced but the skill remains functional.
+Graceful degradation: ✅ Possible — if Serena unavailable, use Glob/Grep/Read for file analysis. Quality is reduced but the skill remains functional.
 
 ## Steps
 
@@ -91,17 +87,16 @@ or "recent changes" is often the fastest path to root cause.
 
 ### Step 2 — Map the code structure
 
-> **Session optimization**: If jcodemunch has already been queried in this session, reuse the repo identifier — but still honor preflight freshness checks. Re-index first if the reused index is stale, then proceed to `get_context_bundle` on the relevant entry point.
+> **Session optimization**: If Serena has already activated the current project in this session, reuse that project context — but confirm you are still in the correct workspace before tracing further.
 
-Use `jcodemunch` to trace the execution path in this order:
+Use `serena` to trace the execution path in this order:
 
-0. **jcodemunch preflight** — run the standard preflight (see `~/.claude/CLAUDE.md` § jcodemunch preflight) with query = "[symptom or error text]". Use the highest-ranked symbols/files to choose the best entry point and reduce blind tracing.
-1. `get_context_bundle` on the chosen entry point (route handler, CLI command, event listener) — get full context of the starting point
-2. `find_references` on the relevant function — trace all callers and callees across files
-3. `get_blast_radius` on the suspected module — understand what depends on it
-4. `get_impact_preview` on the top suspected symbol when the failure may cascade through callers — this exposes the true upstream break path faster than manual tracing.
-5. `get_file_outline` on the highest-signal files before opening more source — confirm which symbols are worth reading
-6. `get_symbol_source` on any function that looks suspicious — inspect its full implementation
+0. **Serena preflight** — activate the current project. If onboarding has not been performed, run onboarding before tracing symbols.
+1. `find_symbol` on the chosen entry point (route handler, CLI command, event listener) — locate the best starting symbol.
+2. `get_symbols_overview` on the relevant file — confirm which symbols are worth reading.
+3. `find_referencing_symbols` on the relevant function — trace callers/usages across files.
+4. `search_for_pattern` on the error string, config key, or suspicious behavior — expose parallel failure points faster than manual tracing.
+5. `read_file` on any function or file section that still looks suspicious — inspect the exact implementation.
 
 From this, identify:
 - All layers the request/data passes through (middleware, validators, handlers, services, DB)
@@ -139,7 +134,7 @@ Do **not** call `sequentialthinking` if the stack trace or code path already ide
 - If results point to an API misuse → call `resolve-library-id` + `query-docs` with the specific method/behavior in question. This is faster than /b-research for a single API question. Escalate to /b-research only if context7 has no index for the library.
 - Do this before verifying hypotheses — it may eliminate wrong hypotheses immediately and save significant time.
 
-**Error string search**: If the error message text is short and specific → call `search_text(is_regex=false, pattern="[exact error string]")` to find all places in the codebase that produce or handle this error. This often reveals the true origin faster than tracing the call graph.
+**Error string search**: If the error message text is short and specific → call `search_for_pattern` with the exact error string to find all places in the codebase that produce or handle this error. This often reveals the true origin faster than tracing the call graph.
 
 ---
 
@@ -149,10 +144,10 @@ Test hypotheses starting from the most likely:
 
 - Add targeted logging at the suspected choke point (not scattered everywhere)
 - Check config/env values if hypothesis points there.
-- Use `get_file_outline` first when narrowing within a large file; then `get_symbol_source` or `get_context_bundle` to re-examine the exact suspicious function.
-- Use `get_related_symbols` on a suspicious function to discover other functions with similar logic — useful when the bug pattern may exist in multiple places.
+- Use `get_symbols_overview` first when narrowing within a large file; then `read_file` to re-examine the exact suspicious function.
+- Use `find_referencing_symbols` or `search_for_pattern` when the bug pattern may exist in multiple places.
 - If the hypothesis points to library API misuse: call `resolve-library-id` + `query-docs` directly to verify the correct method signature, parameter order, or behavior. Escalate to /b-research only if context7 has no index.
-- **Regression detection**: if the bug appeared after a recent change, use `get_symbol_diff` to compare the current symbol against an older indexed state (requires two index snapshots)
+- **Regression detection**: if the bug appeared after a recent change, compare the current symbol/file content against the recent git diff before changing code.
 
 **Dynamic verification** — if static analysis is insufficient to confirm root cause (plausible hypothesis but not provable from code alone):
 
@@ -177,9 +172,10 @@ State clearly: *"Root cause: [X] because [Y]"* before writing any fix.
 Now that root cause is confirmed, the default behavior is to implement the minimal safe fix immediately — not to hand the fix back to the caller as a separate follow-up.
 
 - Write the minimal fix — don't refactor unrelated code in the same change.
+- Prefer Serena symbolic edits in this order: `replace_symbol_body` → `insert_before_symbol` / `insert_after_symbol` → `rename_symbol`; use `replace_content` only when symbolic edits cannot express the exact patch safely.
 - If the fix touches a non-obvious API or behavior, add a comment explaining why.
 - If the bug reveals a broader pattern (e.g. same silent-catch pattern exists in 3 other places), flag it to the user as a separate follow-up — don't fix everything at once.
-- After applying the fix, call `index_file` on each changed file to keep the jcodemunch index fresh.
+- After applying the fix, keep the change scoped to the confirmed symbol/file only.
 
 ---
 
@@ -205,7 +201,7 @@ After applying the fix:
 - Expected: ...
 - Actual: ...
 
-**Code path** *(from [jcodemunch / manual analysis])*
+**Code path** *(from [Serena / manual analysis])*
 [Entry point] → [Layer 1] → [Layer 2] → [Failure point]
 Note any silent catch blocks or unexpected stops in the path.
 

@@ -2,8 +2,8 @@
 
 A lean 4-skill suite for **Claude Code**.
 
-The suite is optimized around **symbol-first code analysis (jCodeMunch)** and **selective structured reasoning (Sequential Thinking only when ambiguity or trade-offs justify it)**.
-It also hardens jCodeMunch preflight against **stale cached indexes** and **empty-folder false positives** before any skill trusts indexed code context.
+The suite is optimized around **symbol-first code analysis (Serena MCP)** and **selective structured reasoning (Sequential Thinking only when ambiguity or trade-offs justify it)**.
+It uses Serena's best-practice flow: **activate project → symbol/file discovery → symbol overview → references → narrow reads → symbolic edits** before any skill trusts code context.
 
 ## Install & Update
 
@@ -44,7 +44,7 @@ See [REFERENCE.md](REFERENCE.md) for full details — triggers, output format, r
 | `context7` | Live, version-accurate library docs |
 | `brave-search` | Real web search |
 | `firecrawl` | Full page scraping |
-| `jcodemunch` | Code structure, symbol-first retrieval, impact analysis |
+| `serena` | Code structure, symbol-first retrieval, references, symbolic editing |
 | `sequential-thinking` | Structured reasoning |
 
 Verify all 5 are connected in Claude Code (`/mcp`).
