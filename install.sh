@@ -201,8 +201,8 @@ PYEOF
   echo "✅ Serena hooks written to $config_file"
 }
 
-read -rp "Install Claude Code hooks for Serena (recommended)? [Y/n]: " install_hooks </dev/tty
-install_hooks="${install_hooks:-Y}"
+read -rp "Install Claude Code hooks for Serena (recommended)? [y/N] (default: N): " install_hooks </dev/tty
+install_hooks="${install_hooks:-N}"
 if [[ "$install_hooks" =~ ^[Yy]$ ]]; then
   EXISTING=$(cat "$HOME/.claude/settings.json" 2>/dev/null || echo "{}")
   HOOKS_CONFIG="$_HOOKS_CONFIG" EXISTING="$EXISTING" _install_hooks
@@ -258,8 +258,8 @@ PYEOF
   echo "✅ MCP permissions written to $config_file"
 }
 
-read -rp "Install MCP tool permissions (allow all tools)? [Y/n]: " install_perms </dev/tty
-install_perms="${install_perms:-Y}"
+read -rp "Install MCP tool permissions (allow all tools)? [y/N] (default: N): " install_perms </dev/tty
+install_perms="${install_perms:-N}"
 if [[ "$install_perms" =~ ^[Yy]$ ]]; then
   PERMISSIONS_CONFIG="$_PERMISSIONS_CONFIG" EXISTING=$(cat "$HOME/.claude/settings.json" 2>/dev/null || echo "{}") _install_permissions
 fi
