@@ -57,19 +57,6 @@ if [ -d "$SKILLS_SRC" ]; then
 
   echo "✅ Skills: $synced_count synced${stale_count:+, $stale_count removed} → $CLAUDE_SKILLS_DST"
 
-  # ── 2.5. Remove stale global symlink from old OpenCode install ────────────
-  old_agents_link="$HOME/.config/opencode/AGENTS.md"
-  if [ -L "$old_agents_link" ]; then
-    echo "🧹 Found old OpenCode AGENTS.md symlink — removing it."
-    rm "$old_agents_link"
-  fi
-
-  # Remove old OpenCode agent symlinks if they exist
-  if [ -d "$HOME/.config/opencode/agents" ]; then
-    echo "🧹 Found old OpenCode agents directory — removing it."
-    rm -rf "$HOME/.config/opencode/agents"
-  fi
-
 else
   echo "ℹ️  No skills/ folder found — skipping skill sync"
 fi
@@ -85,13 +72,6 @@ if [ -f "$CLAUDE_GLOBAL_SRC" ]; then
   # Create symlink to global CLAUDE.md
   ln -s "$CLAUDE_GLOBAL_SRC" "$CLAUDE_GLOBAL_DST"
   echo "🔗 Global CLAUDE.md → $CLAUDE_GLOBAL_DST"
-
-  # ── 3.5. Remove old global AGENTS.md symlink if present ──────────────────
-  old_claude_agents="$HOME/.claude/AGENTS.md"
-  if [ -L "$old_claude_agents" ]; then
-    echo "🧹 Found old ~/.claude/AGENTS.md symlink — removing it."
-    rm "$old_claude_agents"
-  fi
 fi
 
 # ── 4. Install / update MCP servers ──────────────────────────────────────────
@@ -151,7 +131,7 @@ if [[ "$install_mcps" =~ ^[Yy]$ ]]; then
   echo "   (If uv is not installed: curl -LsSf https://astral.sh/uv/install.sh | sh)"
 fi
 
-# ── 6. Auto-setup Claude Code hooks for Serena ───────────────────────────────
+# ── Auto-setup Claude Code hooks for Serena ───────────────────────────────
 _HOOKS_CONFIG='{
   "hooks": {
     "PreToolUse": [
@@ -235,6 +215,61 @@ if [[ "$install_hooks" =~ ^[Yy]$ ]]; then
   EXISTING=$(cat "$HOME/.claude/settings.json" 2>/dev/null || echo "{}")
   HOOKS_CONFIG="$_HOOKS_CONFIG" EXISTING="$EXISTING" _install_hooks
   echo "✅ Serena hooks installed — restart Claude Code for them to take effect."
+fi
+
+# ── 7. Auto-setup MCP tool permissions ──────────────────────────────────────
+_PERMISSIONS_CONFIG='{
+  "permissions": {
+    "allow": [
+      "mcp__serena__*",
+      "mcp__context7__*",
+      "mcp__brave-search__*",
+      "mcp__firecrawl__*",
+      "mcp__sequential-thinking__*"
+    ]
+  }
+}'
+
+_install_permissions() {
+  local config_file="$HOME/.claude/settings.json"
+  mkdir -p "$(dirname "$config_file")"
+
+  local existing
+  existing=$(cat "$config_file" 2>/dev/null || echo "{}")
+  local merged
+  merged=$(python3 - <<'PYEOF'
+import json, sys, os
+
+existing_raw = os.environ.get("EXISTING", "{}")
+try:
+    existing = json.loads(existing_raw)
+except json.JSONDecodeError:
+    existing = {}
+
+perms_new = json.loads(os.environ.get("PERMISSIONS_CONFIG", "{}")).get("permissions", {})
+
+if "permissions" not in existing:
+    existing["permissions"] = {"allow": []}
+
+if "allow" not in existing["permissions"]:
+    existing["permissions"]["allow"] = []
+
+# Merge: add new patterns if not already present
+for pattern in perms_new.get("allow", []):
+    if pattern not in existing["permissions"]["allow"]:
+        existing["permissions"]["allow"].append(pattern)
+
+print(json.dumps(existing, indent=2))
+PYEOF
+)
+  echo "$merged" > "$config_file"
+  echo "✅ MCP permissions written to $config_file"
+}
+
+read -rp "Install MCP tool permissions (allow all tools)? [Y/n]: " install_perms </dev/tty
+install_perms="${install_perms:-Y}"
+if [[ "$install_perms" =~ ^[Yy]$ ]]; then
+  PERMISSIONS_CONFIG="$_PERMISSIONS_CONFIG" EXISTING=$(cat "$HOME/.claude/settings.json" 2>/dev/null || echo "{}") _install_permissions
 fi
 
 # ── 5. Done ──────────────────────────────────────────────────────────────────
