@@ -136,23 +136,15 @@ _HOOKS_CONFIG='{
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "mcp__serena__*",
-        "hooks": [
-          { "type": "command", "command": "serena-hooks auto-approve --client=claude-code" }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          { "type": "command", "command": "serena-hooks activate --client=claude-code" }
-        ]
-      },
-      {
         "matcher": "",
         "hooks": [
           { "type": "command", "command": "serena-hooks remind --client=claude-code" }
+        ]
+      },
+      {
+        "matcher": "mcp__serena__*",
+        "hooks": [
+          { "type": "command", "command": "serena-hooks auto-approve --client=claude-code" }
         ]
       }
     ],

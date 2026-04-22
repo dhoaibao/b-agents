@@ -57,11 +57,8 @@ Claude Code's dynamic tool loading causes **agent drift** — the agent may forg
 {
   "hooks": {
     "PreToolUse": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "serena-hooks remind --client=claude-code" }] },
       { "matcher": "mcp__serena__*", "hooks": [{ "type": "command", "command": "serena-hooks auto-approve --client=claude-code" }] }
-    ],
-    "SessionStart": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "serena-hooks activate --client=claude-code" }] },
-      { "matcher": "", "hooks": [{ "type": "command", "command": "serena-hooks remind --client=claude-code" }] }
     ],
     "Stop": [
       { "matcher": "", "hooks": [{ "type": "command", "command": "serena-hooks cleanup --client=claude-code" }] }
