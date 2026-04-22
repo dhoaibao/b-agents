@@ -269,6 +269,25 @@ Rollback (`git checkout -- .`) must be **offered to the user**, never auto-execu
 
 ---
 
+## Sensitive file safety
+
+Sensitive files (credentials, secrets, env files) must **never be modified or read without explicit user permission**.
+
+Never autonomously:
+- Read, edit, or commit `.env`, `.env.*`, `*.env`, `credentials.json`, `secrets.yml`, `settings.local.json`, or any file matching common secret/credential patterns
+- Auto-add sensitive file paths to gitignore
+- Create stub credentials files
+- Suggest or generate API keys, tokens, or secrets
+
+When a task touches a sensitive file:
+1. **Stop** and state what the file is
+2. **Ask** for explicit user permission before reading or modifying
+3. After editing, **remind** the user to verify the change
+
+This applies to any file that, if leaked or misconfigured, could cause security, financial, or access harm.
+
+---
+
 ## Coding principles (Karpathy)
 
 > Derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls.
