@@ -53,6 +53,18 @@ When Serena is connected: **never** use Glob, Grep, or Read as your first move t
 - Use `search_for_pattern` for exact strings, error text, or repeated implementation patterns.
 - For edits, prefer symbol-aware tools first: `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, then `replace_content` only when symbolic edits are insufficient.
 
+**Serena tool categories** (context `claude-code` enables all standard tools):
+
+| Category | Tools |
+|---|---|
+| **symbol_tools** | `find_symbol`, `find_referencing_symbols`, `get_symbols_overview`, `replace_symbol_body`, `insert_before_symbol`, `insert_after_symbol`, `rename_symbol`, `safe_delete_symbol` |
+| **file_tools** | `find_file`, `list_dir`, `read_file`, `create_text_file`, `replace_content`, `search_for_pattern` |
+| **config_tools** | `activate_project`, `get_current_config` |
+| **workflow_tools** | `initial_instructions`, `check_onboarding_performed`, `onboarding` |
+| **memory_tools** | `list_memories`, `read_memory`, `write_memory`, `edit_memory`, `delete_memory`, `rename_memory` |
+
+Optional tools (disabled by default, may be available): `restart_language_server`, `delete_lines`, `insert_at_line`, `replace_lines`, `open_dashboard`, `remove_project`.
+
 **Mandatory substitution table — no exceptions when Serena is available:**
 
 | Native tool / action | ✅ MUST use instead (Serena) |
@@ -67,6 +79,8 @@ When Serena is connected: **never** use Glob, Grep, or Read as your first move t
 | Searching for error strings/config keys | `search_for_pattern` |
 | Manual symbol-body edits | `replace_symbol_body` |
 | Manual rename across files | `rename_symbol` |
+| Creating new files | `create_text_file` |
+| Listing directory contents | `list_dir` |
 
 **Serena preflight** — run at the start of any skill that needs to understand existing code:
 
@@ -85,11 +99,11 @@ When Serena is connected: **never** use Glob, Grep, or Read as your first move t
 7. Edit with `replace_symbol_body` / `insert_before_symbol` / `insert_after_symbol` / `rename_symbol`
 8. Use `replace_content` only when Serena's symbolic tools cannot express the exact change safely
 
-**Read-order heuristic**:
-1. `find_symbol` / `search_for_pattern`
-2. `get_symbols_overview`
-3. `find_referencing_symbols`
-4. `read_file` only if still necessary
+**Serena memory system** — Serena has a built-in file-based memory system. Prefer it over external memory when appropriate:
+- `list_memories` → check what memories exist
+- `read_memory` → read a specific memory
+- `write_memory` → save project/user/feedback context
+- `edit_memory`, `rename_memory`, `delete_memory` → maintain memories
 
 **Token-efficiency rule**:
 - Do not open full files by default.
@@ -177,7 +191,10 @@ MCP toolset  >  specialized native tool  >  general native tool  >  Bash command
 |---|---|---|---|
 | Read a source file | `serena:get_symbols_overview` / `read_file` | `Read` tool | `cat` via Bash |
 | Find a function | `serena:find_symbol` | `Grep` tool | `grep` via Bash |
-| Edit existing symbol | `serena:replace_symbol_body` / `insert_*` / `rename_symbol` | `apply_patch` | line-edit via shell |
+| Edit existing symbol | `serena:replace_symbol_body` / `insert_before_symbol` / `insert_after_symbol` / `rename_symbol` | `apply_patch` | line-edit via shell |
+| Create a new file | `serena:create_text_file` | `Write` tool | `>` via Bash |
+| List directory | `serena:list_dir` | `Bash ls` | — |
+| Find files by pattern | `serena:find_file` | `Glob` | `find` via Bash |
 | Search the web | `brave_web_search` | `firecrawl_search` | `WebFetch` |
 | Scrape a URL | `firecrawl_scrape` | `WebFetch` | — |
 | Library API lookup | `context7:query-docs` | `firecrawl_scrape(docs URL)` | training knowledge (❌ avoid) |
