@@ -65,6 +65,8 @@ Confirm what is being built before scanning any code.
   - **What does success look like?** 2–4 concrete, verifiable criteria.
 - Ask once. If still unclear, ask one focused follow-up. Don't loop.
 
+**Unknown-ask rule** *(enforced throughout all steps)*: Any requirement or decision that cannot be determined from the task description or the codebase — e.g. behavioral choice, priority, integration contract, naming convention — must be asked to the user immediately. Never self-infer or assume. Surface unknowns as they are discovered; batch them per step if multiple arise at once.
+
 **Feasibility check** *(run inline when scope is non-trivial — not a separate step)*:
 - Does the current architecture support this? Use Serena symbol/file discovery (`list_dir`, `find_file`, `find_symbol`, `find_referencing_symbols`) or Glob/Read if unavailable.
 - Any blockers? (Missing infrastructure, incompatible dependencies, architectural gaps.)
@@ -117,7 +119,12 @@ Use `sequentialthinking` to break the chosen approach into atomic, ordered steps
 - Each step: independently executable, independently verifiable.
 - Ordered by dependency — not by what's easiest.
 - Usually 4–8 steps. Split into phases if >10.
-- Each step answers: *what*, *why now*, *done when*.
+- Each step answers: *what*, *why now*, *done when* — and must include:
+  - **Exact file paths** and **symbol names** involved (e.g. `src/auth/middleware.ts:validateToken()`).
+  - **Current state** of anything being changed (what exists today, what interface/behavior will change).
+  - **Concrete done-when** that a fresh agent can verify independently (test command, observable output, specific assertion).
+  - Any **API signatures**, **config keys**, or **contract details** needed to implement without further lookup.
+- **Handoff standard: 90%+** — if a fresh agent with zero prior context would need to ask a follow-up question to implement the step, the step is not detailed enough. Add the missing detail now.
 - Ask for output in this shape: `Goal`, `Constraints`, `Ordered steps`, `Dependencies`, `Open questions`, `First action`.
 
 **Impact checkpoint** *(modify-existing-code only)*:
@@ -141,12 +148,15 @@ Flag anything unresolved before handing off the plan:
 - **Decisions needed**: choices that require user input.
 - **Assumptions**: things the plan assumes but hasn't confirmed.
 
-**Resolve inline when cheap:**
-- Single library method / yes-no capability → call `resolve-library-id` + `query-docs`. Append `→ Confirmed: [finding]`.
-- 2-option quick comparison → call `brave_web_search`, resolve inline.
-- Complex or multi-source → delegate to /b-research (mark as Unknown, don't block the plan).
+**Classify each unknown before acting:**
 
-An unresolved unknown is a risk. Name it now.
+| Type | Action |
+|---|---|
+| **User decision** — behavioral choice, priority, integration contract, naming, or anything the codebase can't answer | ⛔ Stop. Ask the user immediately. Do NOT write the plan until resolved. |
+| **Tech lookup** — library API behavior, yes/no capability, 2-option comparison | Resolve inline: `query-docs` (context7) or `brave_web_search`. Append `→ Confirmed: [finding]`. |
+| **Complex research** — multi-source or open-ended comparison | Delegate to /b-research. Mark as `Unknown — needs /b-research: [topic]`. Do NOT block the plan on this. |
+
+**Clarification gate** — before proceeding to Step 6, batch all outstanding user-decision unknowns into a single message and wait for answers. Only write the plan after every user-decision unknown is resolved. A plan with unresolved user decisions is not a complete plan.
 
 ---
 
@@ -189,9 +199,10 @@ Always English, regardless of the user's query language.
 ## Steps
 
 - [ ] 1. [Step name]
-  - What: ...
+  - What: ... *(exact file path + symbol name if applicable)*
+  - Current state: ... *(what exists today that will change)*
   - Why now: ...
-  - Done when: ...
+  - Done when: ... *(verifiable by a fresh agent — test command, output, assertion)*
 
 - [ ] 2. [Step name]
   ...
@@ -221,3 +232,5 @@ Always English, regardless of the user's query language.
 - Surface risks and assumptions proactively.
 - Split into phases if 10+ steps.
 - Never trigger destructive git commands.
+- **Never self-infer ambiguous requirements** — if a decision requires user input, ask immediately during planning. A plan built on silent assumptions is not a complete plan.
+- **Handoff standard: 90%+** — the final plan must be self-contained enough that a fresh agent with zero prior context can implement every step correctly without asking clarifying questions. Include exact paths, symbol names, current state, and verifiable done-when criteria in every step.
