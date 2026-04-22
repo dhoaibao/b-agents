@@ -17,9 +17,10 @@ Review changed code from a reviewer's perspective before it becomes a PR. Checks
 correctness, requirements coverage, edge cases, and test adequacy — the things automated
 tooling cannot catch.
 
-If `$ARGUMENTS` is provided, treat it as a pointer to the plan file or a description of
-the original requirements (e.g. `add retry logic to email queue`). Use it as the
-requirements baseline for Step 2.
+If `$ARGUMENTS` is provided, parse flags first, then treat the remainder as a pointer to the plan file or a description of the original requirements (e.g. `add retry logic to email queue`). Use it as the requirements baseline for Step 2.
+
+**Flags** (strip before processing requirements baseline):
+- `--skip-test` — skip the **Test adequacy check** sub-section in Step 5 and skip Step 5.5 entirely. Focus on code review, logic correctness, requirements coverage, and edge cases only.
 
 ## When to use
 
@@ -185,7 +186,7 @@ Flag any requirement that is ❌ or ⚠️ as a blocker before PR.
 - Failure of downstream dependencies (DB down, API timeout)
 - Unexpected input types.
 
-**Test adequacy check**:
+**Test adequacy check** *(skip if `--skip-test` was passed)*:
 - Does a test exist for each requirement from Step 2?
 - Do tests cover the unhappy path (errors, empty results, invalid input)?
 - Are tests testing behavior or implementation details? (behavior tests survive refactors; implementation tests don't)
@@ -196,6 +197,8 @@ If tests are missing for a requirement or critical edge case: flag as a finding,
 ---
 
 ### Step 5.5 — Observability check *(conditional)*
+
+**Skip entirely if**: `--skip-test` was passed.
 
 **Skip entirely if**: diff is ≤50 lines AND ≤2 files (same fast-path threshold as Step 2).
 
