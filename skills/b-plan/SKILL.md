@@ -67,6 +67,8 @@ Confirm what is being built before scanning any code.
 
 **Unknown-ask rule** *(enforced throughout all steps)*: Any requirement or decision that cannot be determined from the task description or the codebase — e.g. behavioral choice, priority, integration contract, naming convention — must be asked to the user immediately. Never self-infer or assume. Surface unknowns as they are discovered; batch them per step if multiple arise at once.
 
+**Decision accumulation** *(running record throughout all steps)*: Each time a user answer, a codebase finding, or an approach choice settles a behavioral or design question, immediately record it as a numbered confirmed decision. These compile into `## Confirmed decisions` in the plan. Format each entry as a single, unambiguous, implementation-actionable statement — no hedging, no "consider", no "may". Example: `"Realtime update must update the existing VoiceCall matched by VendorCallKey; if soft-deleted, insert a new row instead."`
+
 **Feasibility check** *(run inline when scope is non-trivial — not a separate step)*:
 - Does the current architecture support this? Use Serena symbol/file discovery (`list_dir`, `find_file`, `find_symbol`, `find_referencing_symbols`) or Glob/Read if unavailable.
 - Any blockers? (Missing infrastructure, incompatible dependencies, architectural gaps.)
@@ -107,6 +109,7 @@ Run if the task has a structural decision: new module vs extending existing, syn
 2. Use `sequentialthinking` to evaluate them systematically against the current constraints.
 3. Make the reasoning useful for execution: return the chosen approach, alternatives rejected, the assumption that could flip the decision, and the first implementation step.
 4. Pick one and document in `## Decision` (see plan file format below).
+5. Add the approach choice and all structural trade-offs settled here to the running confirmed decisions list.
 
 Skip this step if the approach is already obvious or decided — do not invent choices where there are none.
 
@@ -124,6 +127,7 @@ Use `sequentialthinking` to break the chosen approach into atomic, ordered steps
   - **Current state** of anything being changed (what exists today, what interface/behavior will change).
   - **Concrete done-when** that a fresh agent can verify independently (test command, observable output, specific assertion).
   - Any **API signatures**, **config keys**, or **contract details** needed to implement without further lookup.
+  - **`Exact [X]:`** sub-bullets for any implementation choices that must be locked in to prevent implementor drift — e.g. `Exact insertion points:`, `Exact helper responsibilities:`, `Exact fields to create:`, `Concrete implementation choice:`, `Build rules:`. Add these whenever the step would otherwise leave a structural decision open.
 - **Handoff standard: 90%+** — if a fresh agent with zero prior context would need to ask a follow-up question to implement the step, the step is not detailed enough. Add the missing detail now.
 - Ask for output in this shape: `Goal`, `Constraints`, `Ordered steps`, `Dependencies`, `Open questions`, `First action`.
 
@@ -136,6 +140,10 @@ Use `sequentialthinking` to break the chosen approach into atomic, ordered steps
 - New routes/endpoints → `⚠️ consider feature flag`
 - DB schema changes → `⚠️ deploy order: [before / after] app deploy`
 - New external service calls → `⚠️ verify availability in target environment`
+
+**Planned touch points** — after decomposing all steps, compile `## Planned touch points` for the plan file: one bullet per file/class that will change, with the exact path and what is added/changed/removed at method or field level. A fresh agent must be able to read this section and know every artifact to touch before opening a single file.
+
+**Mapping/contract table** *(conditional — only when the task involves field mapping, data transformation, or protocol contracts)*: produce a `## Mapping outline` section listing every source → target mapping with repo field names, types, and any normalization notes. Prevents implementors from guessing names or semantics.
 
 ---
 
@@ -194,15 +202,28 @@ Always English, regardless of the user's query language.
 **Alternatives rejected**: [option — reason]; [option — reason]
 **Why**: [1–2 sentence rationale]
 
+## Confirmed decisions
+1. [Unambiguous, implementation-actionable statement of a behavioral/design/product decision made during planning.]
+2. ...
+
+## Mapping outline *(only if task involves field mapping, data transformation, or protocol contracts)*
+- `[source field / repo property]` → `[target field]` — [normalization notes]
+...
+
+## Planned touch points
+- `[exact/path/to/File.ext]` — [what is added / changed / removed, at method or field level]
+...
+
 ---
 
 ## Steps
 
 - [ ] 1. [Step name]
-  - What: ... *(exact file path + symbol name if applicable)*
+  - What: ... *(exact file path + symbol name)*
   - Current state: ... *(what exists today that will change)*
   - Why now: ...
   - Done when: ... *(verifiable by a fresh agent — test command, output, assertion)*
+  - Exact [X]: ... *(optional — lock in implementation choices, field lists, insertion points, build rules that must not be left open)*
 
 - [ ] 2. [Step name]
   ...
