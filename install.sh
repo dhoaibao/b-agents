@@ -128,6 +128,7 @@ if [[ "$install_mcps" =~ ^[Yy]$ ]]; then
   echo "ℹ️  Serena: run the following commands to install and initialize:"
   echo "   uv tool install -p 3.13 serena-agent@latest --prerelease=allow"
   echo "   serena init"
+  echo "   claude mcp add --scope user serena -- serena start-mcp-server --context claude-code --project-from-cwd"
   echo "   (If uv is not installed: curl -LsSf https://astral.sh/uv/install.sh | sh)"
 fi
 
@@ -163,49 +164,64 @@ _install_hooks() {
   local config_file="$HOME/.claude/settings.json"
   mkdir -p "$(dirname "$config_file")"
 
-  if [ -f "$config_file" ]; then
-    local existing
-    existing=$(cat "$config_file")
-    # Merge hooks into existing config (don't overwrite other hooks)
-    local merged
-    merged=$(python3 - <<'PYEOF'
-import json, sys, os
+  local existing
+  existing=$(cat "$config_file" 2>/dev/null || echo "{}")
 
+  local merged
+  if ! merged=$(HOOKS_CONFIG="$_HOOKS_CONFIG" EXISTING="$existing" python3 - <<'PYEOF'
+import json, os, sys
+from datetime import datetime
+from pathlib import Path
+
+config_file = Path(os.path.expanduser("~/.claude/settings.json"))
 existing_raw = os.environ.get("EXISTING", "{}")
 try:
-    existing = json.loads(existing_raw)
+    existing = json.loads(existing_raw) if existing_raw.strip() else {}
 except json.JSONDecodeError:
+    backup = config_file.with_suffix(f".json.invalid-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    if config_file.exists():
+        backup.write_text(config_file.read_text())
+    print(f"Invalid JSON in {config_file}. Backed it up to {backup}.", file=sys.stderr)
     existing = {}
 
 hooks_new = json.loads(os.environ.get("HOOKS_CONFIG", "{}")).get("hooks", {})
+hooks_existing = existing.setdefault("hooks", {})
 
-if "hooks" not in existing:
-    existing["hooks"] = {}
+def hook_commands(entry):
+    return {
+        hook.get("command")
+        for hook in entry.get("hooks", [])
+        if hook.get("type") == "command" and hook.get("command")
+    }
 
 for hook_type, hook_entries in hooks_new.items():
-    if hook_type not in existing["hooks"]:
-        existing["hooks"][hook_type] = []
-    # Deduplicate by command — don't add if already present
-    existing_cmds = {h.get("command", "") for h in existing["hooks"][hook_type]}
+    existing_entries = hooks_existing.setdefault(hook_type, [])
+    existing_cmds = set()
+    for entry in existing_entries:
+        existing_cmds.update(hook_commands(entry))
+
     for entry in hook_entries:
-        if entry.get("command", "") not in existing_cmds:
-            existing["hooks"][hook_type].append(entry)
+        new_cmds = hook_commands(entry)
+        if new_cmds and new_cmds.issubset(existing_cmds):
+            continue
+        existing_entries.append(entry)
+        existing_cmds.update(new_cmds)
 
 print(json.dumps(existing, indent=2))
 PYEOF
-)
-    echo "$merged" > "$config_file"
-  else
-    echo "$_HOOKS_CONFIG" > "$config_file"
+  ); then
+    echo "⚠️  Failed to merge Serena hooks into $config_file" >&2
+    return 1
   fi
+
+  printf '%s\n' "$merged" > "$config_file"
   echo "✅ Serena hooks written to $config_file"
 }
 
 read -rp "Install Claude Code hooks for Serena (recommended)? [y/N] (default: N): " install_hooks </dev/tty
 install_hooks="${install_hooks:-N}"
 if [[ "$install_hooks" =~ ^[Yy]$ ]]; then
-  EXISTING=$(cat "$HOME/.claude/settings.json" 2>/dev/null || echo "{}")
-  HOOKS_CONFIG="$_HOOKS_CONFIG" EXISTING="$EXISTING" _install_hooks
+  _install_hooks
   echo "✅ Serena hooks installed — restart Claude Code for them to take effect."
 fi
 
@@ -228,40 +244,47 @@ _install_permissions() {
 
   local existing
   existing=$(cat "$config_file" 2>/dev/null || echo "{}")
-  local merged
-  merged=$(python3 - <<'PYEOF'
-import json, sys, os
 
+  local merged
+  if ! merged=$(PERMISSIONS_CONFIG="$_PERMISSIONS_CONFIG" EXISTING="$existing" python3 - <<'PYEOF'
+import json, os, sys
+from datetime import datetime
+from pathlib import Path
+
+config_file = Path(os.path.expanduser("~/.claude/settings.json"))
 existing_raw = os.environ.get("EXISTING", "{}")
 try:
-    existing = json.loads(existing_raw)
+    existing = json.loads(existing_raw) if existing_raw.strip() else {}
 except json.JSONDecodeError:
+    backup = config_file.with_suffix(f".json.invalid-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    if config_file.exists():
+        backup.write_text(config_file.read_text())
+    print(f"Invalid JSON in {config_file}. Backed it up to {backup}.", file=sys.stderr)
     existing = {}
 
 perms_new = json.loads(os.environ.get("PERMISSIONS_CONFIG", "{}")).get("permissions", {})
+permissions = existing.setdefault("permissions", {})
+allow = permissions.setdefault("allow", [])
 
-if "permissions" not in existing:
-    existing["permissions"] = {"allow": []}
-
-if "allow" not in existing["permissions"]:
-    existing["permissions"]["allow"] = []
-
-# Merge: add new patterns if not already present
 for pattern in perms_new.get("allow", []):
-    if pattern not in existing["permissions"]["allow"]:
-        existing["permissions"]["allow"].append(pattern)
+    if pattern not in allow:
+        allow.append(pattern)
 
 print(json.dumps(existing, indent=2))
 PYEOF
-)
-  echo "$merged" > "$config_file"
+  ); then
+    echo "⚠️  Failed to merge MCP permissions into $config_file" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$merged" > "$config_file"
   echo "✅ MCP permissions written to $config_file"
 }
 
 read -rp "Install MCP tool permissions (allow all tools)? [y/N] (default: N): " install_perms </dev/tty
 install_perms="${install_perms:-N}"
 if [[ "$install_perms" =~ ^[Yy]$ ]]; then
-  PERMISSIONS_CONFIG="$_PERMISSIONS_CONFIG" EXISTING=$(cat "$HOME/.claude/settings.json" 2>/dev/null || echo "{}") _install_permissions
+  _install_permissions
 fi
 
 # ── 5. Done ──────────────────────────────────────────────────────────────────
