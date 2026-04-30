@@ -232,6 +232,14 @@ Add the following hooks to `~/.claude/settings.json`:
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "serena-hooks activate --client=claude-code" }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
@@ -247,6 +255,7 @@ Add the following hooks to `~/.claude/settings.json`:
 What the hooks do:
 - **`remind`** — nudges the agent to use Serena's symbolic tools when it makes too many consecutive `grep`/native reads calls without using any Serena tool.
 - **`auto-approve`** — auto-approves Serena tool calls in `acceptEdits` mode so blanket edit approvals cover symbol-level edits.
+- **`activate`** — prompts the agent to activate the project and read Serena's instructions at session start.
 - **`cleanup`** — cleans up hook session data when the session ends.
 
 If hooks cause issues (e.g. repeated reminders), remove the specific hook causing the loop.
@@ -342,3 +351,9 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+## Grammar feedback *(personal rule)*
+
+When I send a request or message in English, briefly check its grammar and reply with the corrected or improved version before proceeding with the task. Keep the feedback concise — one short sentence or bullet is enough. Do this silently unless the errors affect understanding of the request.

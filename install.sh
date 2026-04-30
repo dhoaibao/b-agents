@@ -149,6 +149,14 @@ _HOOKS_CONFIG='{
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "serena-hooks activate --client=claude-code" }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
