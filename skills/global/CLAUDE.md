@@ -1,57 +1,58 @@
 # b-skills — Claude Code Global Rules
 
-> Behavioral rules enforced on every turn. For operational reference, see [REFERENCE.md](REFERENCE.md).
+> Short rules enforced every turn.
 
 ---
 
-## Grammar Check — MANDATORY
+## Tool Priority — MANDATORY
 
-Before responding to ANY English user message:
-1. Identify grammatical errors or awkward phrasing
-2. Reply with the corrected/improved version (≤1 sentence)
-3. Then proceed with the task
+When an MCP is connected, use it before native fallbacks.
 
----
-
-## Mandatory MCP Tool Priority
-
-When an MCP is connected, its tools MUST be used before native fallbacks.
-
-| Task | 1st choice | 2nd | Last resort |
-|---|---|---|---|
-| Code symbols | `serena:*` | `Read`/`Edit` | `grep` via Bash |
-| Web search | `brave_web_search` | `firecrawl_search` | `WebFetch` |
-| Scrape URL | `firecrawl_scrape` | `WebFetch` | — |
-| Library docs | `context7:query-docs` | `firecrawl_scrape(docs)` | training (❌) |
-| Complex reasoning | `sequentialthinking` | numbered steps | prose (❌) |
-
-> Full MCP details: see [REFERENCE.md](REFERENCE.md)
+- Before symbol-aware work, call `check_onboarding_performed`; if false, call `onboarding` once.
+- **Code symbols / structural edits** → `serena:*` first. Prefer: symbol discovery / overview → references → narrow reads → symbol-aware edits.
+- Use native `Read` / `Edit` / `Bash` directly only for file listing/discovery, exact-string search, non-code prose, small manifests, or when the user names a small file. Do not bypass Serena for broad code exploration when it can answer.
+- **Library / framework / SDK docs** → `context7:*` first. Resolve the library ID before querying docs. If Context7 is unavailable, scrape the official docs; if that fails, use `/b-research`. Never fill library-specific gaps from training knowledge alone.
+- **Web search** → `brave-search` first; fall back to `firecrawl_search`, then `WebFetch` only as a last resort.
+- **Known URLs / page extraction** → `firecrawl_scrape` first. If scrape misses JS-rendered content, use `firecrawl_map` before broader fallback.
+- **Complex reasoning** → `sequential-thinking` for multi-hypothesis debugging, architecture, vague decomposition, or real trade-off analysis. If unavailable, use numbered hypotheses with evidence and confirmed/rejected status.
+- If a required MCP is unavailable, say so explicitly and follow the skill's documented fallback. If the skill says graceful degradation is not possible, stop and tell the user to check `/mcp` instead of silently switching strategies.
 
 ---
 
 ## Coding Principles
 
-### Think Before Coding
-State assumptions. Surface tradeoffs. If uncertain, ask. If simpler approach exists, say so.
+- **Think before coding**: state assumptions, surface trade-offs, and ask when unclear. If multiple interpretations exist, present them instead of picking silently. If a simpler approach exists, say so.
+- **Keep solutions minimal**: add only what was asked. No speculative features, no single-use abstractions, no unrequested configurability, and no impossible-case handling.
+- **Make surgical changes**: touch only what is needed, match the existing style, and do not clean up unrelated code, comments, or formatting. Remove only imports, variables, or functions that your change made unused.
+- **Define success before acting**: turn tasks into verifiable goals and state a brief step → verify plan for multi-step work. Do not stop at "implemented"; stop at verified.
 
-### Simplicity First
-Minimum code that solves the problem. No speculative abstractions. No error handling for impossible scenarios.
+---
 
-### Surgical Changes
-Touch only what you must. Match existing style. Remove only imports/variables YOUR changes made unused.
+## Session Hygiene
 
-### Goal-Driven Execution
-Define success criteria before acting. Transform tasks into verifiable goals.
+- After compaction, re-read the active plan if one exists, re-check Serena onboarding if project context seems lost, and prefer focused reads and diff inspection over pasting large files into chat.
 
 ---
 
 ## Git Safety
 
 Never run autonomously: `git push`, `git pull`, `git commit`, `git reset --hard`, `git revert`, `git clean -f`, `git branch -D`.
-Rollback (`git checkout -- .`) must be **offered to the user**, never auto-executed.
+
+Never auto-rollback with `git checkout -- .`; offer it to the user instead.
 
 ---
 
 ## Sensitive File Safety
 
-Never read, edit, or commit files matching `.env*`, `*.env`, `credentials.json`, `secrets.yml`, `settings.local.json` without explicit user permission. Stop and ask first.
+Never read, search, print, diff, edit, upload, summarize, or commit files that likely contain secrets without explicit user permission.
+
+Treat at least these as sensitive:
+- `.env*`, `*.env`, `.envrc`, `.npmrc`, `.pypirc`, `.netrc`
+- `credentials.json`, `settings.local.json`, `secrets.yml`, `secrets.yaml`, `*.tfvars`, `terraform.tfstate*`
+- private keys and cert material: `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`, `id_ed25519`, `.ssh/*`, `.gnupg/*`
+- cloud / cluster / deploy auth: `.aws/*`, `.config/gcloud/*`, `kubeconfig`, `.kube/config`
+- any file whose name suggests secrets, tokens, credentials, private keys, or service-account data
+
+Do not recursively grep, glob, or scan inside sensitive locations without explicit user permission.
+
+If unsure whether a file is sensitive, stop and ask first.
