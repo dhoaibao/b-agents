@@ -1,12 +1,11 @@
 ---
 name: b-research
 description: >
-  Research, library docs lookup, and multi-source synthesis. ALWAYS invoke when the user says
-  "research", "tìm hiểu", "deep dive", "so sánh", "tổng hợp", "how to use X", "cách dùng",
-  or needs library API docs, comparisons, or reports.
-  Covers both quick library lookups (Context7-first) and full multi-source research.
-  Unlike b-debug (fix broken) or b-plan (decide approach), b-research retrieves and synthesizes
-  external knowledge.
+  External knowledge, from quick lookup to full research. ALWAYS invoke when the user says
+  "research", "tìm hiểu", "deep dive", "so sánh", "tổng hợp", "lookup", "tra cứu nhanh",
+  "what's the API for", "method signature of X", or "config key for Y". Auto-detects
+  quick vs full mode. Unlike b-debug or b-plan, it fetches docs/web info instead of
+  tracing code or choosing implementation.
 effort: high
 ---
 
@@ -14,208 +13,168 @@ effort: high
 
 $ARGUMENTS
 
-All external knowledge in one skill: classify query → fetch versioned library docs via
-Context7 (for API/HOWTO queries) → search with type-specific strategy via Brave Search →
-scrape full content via Firecrawl → synthesize into a report with citations.
+One entry point for external knowledge. Detect whether the question is a quick lookup or full research, answer in the lightest mode that fits, and escalate automatically when the first pass is not enough.
 
-Handles both quick library lookups ("how do I use Prisma transactions?") and deep
-multi-source research ("compare BullMQ vs Bee-Queue for job queues").
-
-If `$ARGUMENTS` is provided, treat it as the research question — proceed directly to Step 1 (classify query type) using the provided text. Do not ask the user to restate their question.
+If `$ARGUMENTS` is provided, treat it as the research question — proceed directly to Step 1. Do not ask the user to restate it.
 
 ## When to use
 
-- User asks how to use a specific library, SDK, or framework feature.
-- User asks "does X support Y?", "what's the API for X?", "how to configure X?".
-- Before implementing code that calls an external library — verify the API first.
-- User asks to research, compare, or deeply understand a topic.
-- User wants a report or summary of multiple sources.
-- User says: "tìm hiểu", "research", "deep dive", "so sánh", "tổng hợp", "how to use X",
-  "cách dùng", "tra cứu", "viết report về".
+- Single-fact lookup: method signature, config key, yes/no capability, minimal example.
+- Library/framework/SDK docs, setup, configuration, migration, feature support.
+- Comparisons, deep dives, multi-source synthesis, or cited reports.
+- User says: "tìm hiểu", "research", "deep dive", "so sánh", "tổng hợp", "lookup", "tra cứu nhanh", "what's the API for", "method signature of X", "config key for Y".
 
 ## When NOT to use
 
-- Quick one-fact lookup (latest version, price, single answer) → use **b-lookup**
-- Daily news digest → call `brave_news_search` directly and format a digest
-- Debugging a broken library call → use **b-debug**
+- Runtime bug or failure → use **b-debug**
+- Need to decide what to build or sequence work → use **b-plan**
+- Pre-PR correctness review → use **b-review**
 
 ## Tools required
 
-- `brave_web_search` — from `brave-search` MCP server (required, general search)
-- `brave_news_search` — from `brave-search` MCP server *(required for NEWS-type queries; use instead of `brave_web_search` for time-sensitive topics)*
-- `firecrawl_scrape` — from `firecrawl` MCP server (required, scrape individual pages)
-- `firecrawl_search` — from `firecrawl` MCP server *(optional, single-call search+scrape fallback when `brave_web_search` returns <3 results)*
-- `firecrawl_map` — from `firecrawl` MCP server *(optional, discover correct URLs when `firecrawl_scrape` returns empty content)*
-- `firecrawl_extract` — from `firecrawl` MCP server *(optional, for structured data extraction — HOWTO/API type when user asks about specific fields, prices, parameters, or specs; more efficient than scrape + manual parsing)*
-- `firecrawl_crawl` + `firecrawl_check_crawl_status` — from `firecrawl` MCP server *(optional, async deep multi-page crawl for documentation sites)*
-- `resolve-library-id` + `query-docs` — from `context7` MCP server *(optional, for library/framework API topics)*
-- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, for structured conflict resolution)*
+- `resolve-library-id`, `query-docs` — from `context7` MCP server (primary for library/framework API questions)
+- `brave_web_search` — from `brave-search` MCP server (required for web search)
+- `brave_news_search` — from `brave-search` MCP server *(required for NEWS-type full-mode queries)*
+- `firecrawl_scrape` — from `firecrawl` MCP server *(required for full-mode page reads and cited synthesis)*
+- `firecrawl_search` — from `firecrawl` MCP server *(optional, fallback when Brave returns too few relevant results)*
+- `firecrawl_map` — from `firecrawl` MCP server *(optional, discover correct URLs when scrape misses JS-rendered content)*
+- `firecrawl_extract` — from `firecrawl` MCP server *(optional, structured extraction for fields, prices, params, or specs)*
+- `firecrawl_crawl` + `firecrawl_check_crawl_status` — from `firecrawl` MCP server *(optional, deep docs crawl for multi-page coverage)*
+- `sequentialthinking` — from `sequential-thinking` MCP server *(optional, resolve materially conflicting sources)*
 
-If brave-search or firecrawl is unavailable, stop and tell the user:
-- brave-search missing: "❌ brave-search MCP is not connected. Please check `/mcp`.".
-- firecrawl missing: "❌ firecrawl MCP is not connected. Please check `/mcp`.".
+If context7 is unavailable: continue with Brave for library questions.
+If brave-search is unavailable:
+- quick mode with a clear Context7 answer may still complete;
+- otherwise stop and tell the user: `❌ brave-search MCP is not connected. Please check /mcp.`
+If firecrawl is unavailable:
+- quick mode may still complete without scraping;
+- full mode is blocked — tell the user: `❌ firecrawl MCP is not connected. Please check /mcp.`
+If sequential-thinking is unavailable: summarize conflicts inline as `Source A says X / Source B says Y / Best fit: Z`.
 
-If context7 is unavailable on a library/framework topic, skip Step 2 silently and continue with Step 3.
-If sequential-thinking is unavailable: summarize conflicting findings inline as `Source A says X / Source B says Y / Best fit for user context: Z`.
-
-Graceful degradation: ❌ Not possible — this skill requires live web data (brave-search + firecrawl). If either MCP is unavailable, stop and tell the user.
+Graceful degradation: ⚠️ Partial — quick mode works with Context7 and/or Brave; full mode requires live search plus Firecrawl.
 
 ## Steps
 
-### Step 1 — Classify query type
+### Step 1 — Detect mode
 
-Classify the user's query into **one of four types** before doing anything else. The type determines the entire search strategy.
+Choose the lightest mode that can answer correctly.
+
+Use **quick mode** when the question is likely answerable in 1–3 sentences or a tiny code snippet:
+- method signature
+- config key or flag
+- yes/no capability
+- minimal example
+- one specific API behavior
+
+Use **full mode** when the question needs:
+- comparisons
+- multiple sources
+- citations or report output
+- recency or news
+- reading full pages or extracting structured details from pages
+
+If uncertain, start in quick mode and escalate automatically to full mode if the answer needs more than 2 tool calls, more than 1 source, or any page scraping.
+
+### Step 2 — Quick mode
+
+1. Classify the question:
+   - **Library API / SDK / framework** → Context7 first
+   - **General tool / config / web fact** → Brave first
+2. For library questions:
+   - Call `resolve-library-id`
+   - Call `query-docs` with the exact feature/question
+   - If Context7 gives a clear answer, stop and return the quick output format
+3. If Context7 has no clear answer, or the question is not library-specific:
+   - Run one `brave_web_search` with the exact question
+   - Return the answer directly if one high-confidence result is enough
+4. Do not scrape, crawl, or synthesize in quick mode.
+5. If a confident direct answer is still not possible, continue to Step 3 instead of telling the user to switch skills.
+
+### Step 3 — Full-mode type classification
+
+Classify the query into one of four full-mode types:
 
 | Type | Signals | Strategy |
-|------|---------|----------|
-| **VERSION** | "latest version", "what's new", "changelog", "release notes", "current version of X" | Official docs FIRST via direct scrape, then web search |
-| **COMPARE** | "vs", "so sánh", "which is better", "A or B", "compare X and Y" | 2 balanced searches (one per option), equal coverage of both sides |
-| **NEWS** | "recent", "2025/2026", "mới nhất", "latest news", "what happened", time-sensitive topics | `brave_news_search` with `freshness: "pd"` or `"pw"` |
-| **HOWTO / API** | "how to", "cách dùng", "tutorial", "setup", "configure", asking about API usage | Context7 first (Step 2), then scrape official docs + community |
+|---|---|---|
+| **VERSION** | "latest version", "what's new", "changelog", "release notes", "current version of X" | Official docs/changelog first, then community context |
+| **COMPARE** | "vs", "so sánh", "which is better", "A or B", "compare X and Y" | Balanced coverage for both sides |
+| **NEWS** | "recent", "2025/2026", "mới nhất", "latest news", time-sensitive topics | `brave_news_search` with freshness |
+| **HOWTO / API** | "how to", "cách dùng", "tutorial", "setup", "configure", API usage | Context7 first, then official/community sources |
 
-**If topic is library/framework API → also run Step 2 (Context7) before Step 3.**
-**All other types → skip Step 2, go to Step 3.**
+If the topic is library/framework API, also run Step 4 before Step 5.
 
----
+### Step 4 — Context7 lookup *(HOWTO/API full mode only)*
 
-### Step 2 — Context7 lookup *(HOWTO/API type only)*
+- Detect the installed version from manifests/lockfiles when possible.
+- Use `resolve-library-id` to find the right docs target.
+- Use `query-docs` for the specific API/feature.
+- If Context7 has no match, continue with web search.
+- If Context7 returns a different major version than the project, flag the mismatch.
+- Use Context7 for API accuracy, but do not rely on it as the only source in full mode.
 
-> **Session optimization**: If Context7 has already been queried for this library in the current session, reuse those findings — do not call it again.
+### Step 5 — Search
 
-**Version detection** — before querying docs, attempt to find the exact installed version:
-- Use native file reads for manifests because Serena file tools are not exposed in this environment.
-- Check `package.json`, `pyproject.toml`, `requirements.txt` in the project root.
-- If version contains a range (`^`, `~`, `>=`, `*`), check the lockfile for the exact resolved version.
-- If no manifest found, proceed without version constraint and note: `⚠️ No manifest found — docs may not match installed version.`
+Apply the search strategy for the full-mode type:
 
-Use `resolve-library-id` to find the correct Context7 library ID, then `query-docs` to fetch version-accurate documentation.
+**VERSION**
+- Prefer the official changelog or release notes page first.
+- Then search for community context.
 
-- Set `topic` to the specific feature or API area relevant to the user's question.
-- Fetch enough tokens to cover the relevant API surface (default: 8000–12000 tokens).
-- If `resolve-library-id` returns no match → skip to Step 3 (web search). Note it in the report.
-- If Context7 returns docs for a different major version than detected → flag explicitly: "⚠️ Context7 returned docs for vX but project uses vY — API may differ."
-- Skip this step if user's question is clearly recency-dependent (e.g., "what changed in v5?") — Context7 may be stale for recent releases.
-- **Do not use Context7 output as the sole source** — it provides API accuracy; web sources provide real-world usage and community feedback.
+**COMPARE**
+- Run two balanced Brave searches, one per option.
+- Include at least one neutral source.
 
-**For simple library lookups** (single method, config key, or yes/no capability check): if Context7 returns a clear answer, you may stop here and present the result using the Library Lookup output format below — no need to proceed to web search.
-
----
-
-### Step 3 — Search (type-specific strategy)
-
-Apply the strategy for the query type identified in Step 1:
-
-**VERSION queries:**
-- If the tool has a known official docs/changelog URL → use `firecrawl_scrape` on it DIRECTLY first (skip to Step 4 for this URL), then use Brave to find community context.
-- If official URL is unknown → search with: `"[tool name] official changelog [year]"` or `"[tool name] release notes site:[official-domain]"`
-- Always include `official` or `changelog` in the query to avoid third-party aggregators.
-- Third-party version trackers (deepwiki, community changelogs) have staleness lag of 1–3 weeks — treat them as supplementary only, not authoritative.
-
-**COMPARE queries:**
-- Run **2 separate Brave searches**: one focused on option A, one on option B (in parallel)
-- Pick sources that cover each option from its own perspective (official docs, official blog)
-- Pick at least 1 neutral comparison source (benchmarks, independent reviews)
-- Ensure balanced coverage: minimum 1 authoritative source per option being compared.
-- Up to 7 URLs may be scraped for comparison queries to ensure balance (exception to the 5-URL default)
-
-**NEWS queries:**
-- Use `brave_news_search` (not `brave_web_search`) with `freshness: "pd"` (last 24h) or `freshness: "pw"` (last 7 days)
-- Freshness options: `"pd"` = past day, `"pw"` = past week, `"pm"` = past month, `"py"` = past year — start with `"pd"`, broaden to `"pw"` if fewer than 3 results.
+**NEWS**
+- Use `brave_news_search`.
+- Start with `freshness: "pd"`, widen to `"pw"` if needed.
 - Include the current year in the query.
-- Prefer official announcements, official blogs, and reputable tech press over aggregators.
 
-**HOWTO / API queries:**
-- After Context7 (Step 2), use Brave to find community tutorials and real-world examples.
-- Query should include the library name + version + specific feature.
-- Deprioritize official doc URLs in Brave if Context7 already covered them well.
+**HOWTO / API**
+- After Context7, search for official docs, examples, and high-quality community explanations.
 
-**Universal search rules (all types):**
+Universal rules:
 - Use English queries unless the topic is Vietnamese-specific.
-- Fetch 5–8 results from Brave.
-- **Pick 3 highest-quality URLs** using the source quality hierarchy below (quality over quantity: 3 Tier-1 sources > 5 mixed-tier sources).
-- **Fallback**: If `brave_web_search` returns fewer than 3 relevant results, retry with `firecrawl_search` using the same query — it returns full page content directly, skip Step 4 for those results.
+- Prefer 3 high-quality sources over 5 mixed ones.
+- If Brave returns fewer than 3 relevant results, retry with `firecrawl_search`.
 
-**Source quality hierarchy (prefer top tiers):**
-1. Official docs, official changelogs, official GitHub repo
-2. Official team blog, official announcements
-3. Well-known tech publications (The Verge, Ars Technica, HN top posts, official SDK examples)
-4. Community Q&A (StackOverflow answers with high votes, GitHub Discussions)
-5. Independent technical blogs with clear authorship
-6. Third-party aggregators, trackers, wikis ← treat as supplementary only
+### Step 6 — Scrape or extract
 
-**Avoid**: Pinterest, SEO-farm content mills, AI-generated listicles, paywalled pages (unless the snippet is already sufficient).
+- Scrape only high-signal pages.
+- Use `firecrawl_scrape` with `formats: ["markdown"]` and `onlyMainContent: true`.
+- For structured fields, params, prices, or specs, prefer `firecrawl_extract`.
+- Default cap: 3 URLs; 5 for COMPARE queries.
+- If JS-rendered pages return empty content, retry once with `waitFor: 5000`, then fall back to `firecrawl_map` if needed.
+- If fewer than 2 usable sources remain after quality filtering, stop and tell the user there are not enough reliable sources.
 
----
+### Step 7 — Synthesize
 
-### Step 4 — Scrape
-
-**Pre-scrape filtering** (before Step 4, eliminate low-value URLs):
-- Remove from scrape queue:
-  - Homepage or landing page (no specific content)
-  - Pages requiring login/authentication
-  - Tutorial/guide when user asked for API specs or comparisons (skip tutorials for spec queries)
-  - Third-party aggregators or version trackers (use official source instead)
-  - Paywalled pages with paywall message visible
-- **Goal**: scrape only high-signal sources → saves 1–2K tokens by avoiding trash content
-
-- Call `firecrawl_scrape` on all selected URLs **in parallel** (single message, multiple tool calls)
-- Use `formats: ["markdown"]`, `onlyMainContent: true` to get clean content without boilerplate.
-- **Structured data queries** — if the user asks about specific fields (prices, API parameters, field names, feature lists), prefer `firecrawl_extract` with a JSON schema instead of scrape + manual parsing. Call `firecrawl_extract` in parallel on the same URLs as a replacement or complement to `firecrawl_scrape`.
-- **Fallback for JS-heavy pages** (SPAs, Mintlify/GitBook docs, React-rendered pages): if content is empty or <200 words after one retry with `waitFor: 5000` → skip and note in report as "could not scrape — JS-rendered or access denied".
-- If a page returns rate-limit or 403 → skip it and note in report.
-- Default max: **3 URLs** scraped per session (quality > quantity). Exception: **5 URLs** for COMPARE queries (ensure balanced coverage of both options — 2–3 per side).
-- If rate-limiting occurs on parallel calls, retry failed URLs sequentially.
-
-**Deep multi-page crawl** *(for documentation sites — use when you need comprehensive coverage of a multi-page doc, not just a single article)*:
-1. Call `firecrawl_crawl` on the documentation root URL with `limit: 10–20` pages
-2. Poll `firecrawl_check_crawl_status` every few seconds until `status: "completed"` — do NOT proceed until crawl is done
-3. Use the returned pages as your source set; apply the post-scrape quality gate below
-
-**Post-scrape quality gate** (strict filtering — do this before synthesizing):
-- For each scraped page, check: does the content actually address the user's question?
-- **Discard immediately** if: < 300 words of relevant content AND topic is not mentioned → note "low-quality source discarded"
-- **Discard if** > 50% boilerplate (nav, footer, ads, sidebars) and < 200 unique content words → note "mostly boilerplate"
-- **If fewer than 2 usable sources remain after discarding** → STOP. Tell user: "Couldn't find enough reliable sources on this topic. Try being more specific or rephrasing the question." Do NOT blindly scrape more URLs.
-- **Exception**: For COMPARE queries where sources explicitly disagree, retain >1 source per option even if marginal, to preserve conflicting perspectives.
-
----
-
-### Step 5 — Synthesize
-
-- Read all sources (Context7 output + scraped content) carefully.
-- **Answer from actual scraped content only** — if no source explicitly covers a fact, do NOT fill the gap from training data. Instead, flag it in the `Limitations` section.
-- Note the publication/update date of each source when available — use it to assess freshness.
-- If 2 or more sources recommend conflicting approaches for the same decision point **and the disagreement changes the recommendation** → call `sequentialthinking` with: "Source A says [X] because [reason]. Source B says [Y] because [reason]. Given the user's context of [task], which approach is more applicable and why? State the deciding criteria and what assumption would change the answer." Include the structured reasoning in a "⚖️ Conflicting findings" subsection.
-- If sources conflict on minor details only, note the disagreement inline without calling `sequentialthinking`
-- For VERSION queries: always note the official source version separately from any third-party tracker versions if they differ.
-- Produce a structured report (see output format below)
-
----
+- Answer only from fetched sources.
+- Note freshness/date when available.
+- If sources materially disagree, use `sequentialthinking` when available.
+- Choose the output format that matches the mode:
+  - quick output for resolved quick questions
+  - full report for all full-mode work
 
 ## Output format
 
-### Library lookup (HOWTO/API type — answered by Context7 alone)
+### Quick lookup
 
 ```
-### `[LibraryName]` — [feature/topic]
-*(Context7 — [library-id], v[version if detected])*
+### `[Library or Topic]` — `[question]`
 
-[2–3 sentence summary of the API]
-
-**Key methods / options:**
-- `method(params)` — what it does
-- ...
+[1–3 sentence direct answer]
 
 **Example:**
-\`\`\`[lang]
-// minimal working example based on fetched docs
-\`\`\`
-
-**Notes:**
-- Any gotchas, deprecations, or version differences found in docs
+```[lang]
+// minimal working example
 ```
 
-### Full research report (all other types)
+**Source**: Context7 (`library-id`) / Brave Search
+```
+
+Keep it short. No citations list, no report structure, no recommendations unless the question explicitly asks.
+
+### Full research report
 
 ```
 ## [Topic / Research Question]
@@ -223,7 +182,7 @@ Apply the strategy for the query type identified in Step 1:
 > 📅 Research date: [today's date] | Sources: [N scraped] | Freshness: [Official/Community/Mixed]
 
 ### Summary
-[2–4 sentence direct answer to the user's question, based only on scraped content]
+[2–4 sentence direct answer]
 
 ### Key Findings
 - **[Finding 1]**: ... *(Source: [Official] / [Community])*
@@ -233,38 +192,31 @@ Apply the strategy for the query type identified in Step 1:
 ### [Optional: Comparison Table or Deep Dive Section]
 ...
 
-### ⚖️ Conflicting findings *(optional — only if sources disagree on a key point)*
-[structured reasoning from sequentialthinking]
+### ⚖️ Conflicting findings *(optional)*
+[structured reasoning]
 
 ### Limitations
-- [Any important question the sources did NOT answer]
-- [Any sources discarded and why]
-- [Any data that may be stale — link to official source for verification]
+- [Unanswered gap]
+- [Discarded or failed sources]
+- [Potential staleness]
 
 ### Sources
-- [Official] [Page Title](URL) — [one line on what this source contributed]
-- [Community] [Page Title](URL) — [one line on what this source contributed]
-- Context7 (`library-name`) — versioned API reference for [specific feature]
+- [Official] [Page Title](URL) — [what it contributed]
+- [Community] [Page Title](URL) — [what it contributed]
+- Context7 (`library-name`) — versioned API reference for [feature]
 
 ### Recommended next steps *(optional)*
-- [What the user might want to do now with this information]
+- [What to do now]
 ```
-
----
 
 ## Rules
 
-- Always scrape — never rely on search snippets alone.
-- Apply query type routing from Step 1 — do not use a generic one-size-fits-all search strategy.
-- For VERSION queries: official docs via direct scrape takes priority over any search result.
-- For COMPARE queries: ensure balanced source coverage — do not let one option dominate.
-- For library/framework API topics: always attempt Context7 before scraping.
-- Default max 3 URLs; 5 URLs allowed for COMPARE queries (balanced coverage of both options).
-- Cite every claim with its source URL or "Context7 (`library-name`)".
-- Never state a fact not found in scraped content — use the `Limitations` section for gaps.
-- Label each source as `[Official]`, `[Community]`, or `[Blog]` in the Sources list.
-- For time-sensitive data (versions, prices, availability): always note the source's date and link to official source for verification.
-- If the user asks a specific question, answer it directly in the Summary before going into detail.
-- Keep the report focused — omit irrelevant scraped content.
-- Note any sources that failed to scrape or were discarded so the user can check manually.
-- Never trigger destructive git commands — no `git push`, `git pull`, `git commit`, `git reset`, `git revert`, `git clean -f`, or `git checkout -- <file>`.
+- Never ask the user to choose between lookup vs research — b-research decides or escalates itself.
+- Quick mode caps at 2 tool calls before escalating or answering.
+- Never scrape in quick mode.
+- Always attempt Context7 first for library/framework API questions.
+- In full mode, always scrape or extract before making factual claims from web results.
+- Prefer authoritative sources over aggregators.
+- Cite every full-mode claim with its source URL or `Context7 (library-name)`.
+- Never fill factual gaps from training data in full mode; use `Limitations` instead.
+- Never trigger destructive git commands.

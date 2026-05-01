@@ -1,6 +1,6 @@
 # b-skills
 
-A lean 7-skill suite for **Claude Code**.
+A lean 6-skill suite for **Claude Code**.
 
 The suite is optimized around **symbol-first code analysis (Serena MCP)** and **selective structured reasoning (Sequential Thinking only when ambiguity or trade-offs justify it)**.
 It uses Serena's best-practice flow: **activate project → symbol/file discovery → symbol overview → references → narrow reads → symbolic edits** before any skill trusts code context.
@@ -17,26 +17,24 @@ Then **restart Claude Code** to load the skills.
 
 ## Overview
 
-Seven skills covering the full development cycle:
+Six primary skills covering the full development cycle:
 
 | Skill | When to use |
 |---|---|
 | `/b-plan` | Think before coding — quick/full planning, task decomposition, approach evaluation, plan file when needed |
-| `/b-research` | All external knowledge — library docs, comparisons, multi-source research |
+| `/b-research` | All external knowledge — auto-detects quick lookup vs full research for docs, API facts, comparisons, and reports |
 | `/b-debug` | Full-loop debugging — trace, confirm root cause, fix, verify |
 | `/b-review` | Pre-PR review — logic, requirements, edge cases, test adequacy |
 | `/b-test` | Test-driven development — write tests, fix failing tests, evaluate coverage |
-| `/b-lookup` | Ultra-fast single-fact lookup — method signature, config key, yes/no capability |
 | `/b-refactor` | Code refactoring — impact analysis, safe mechanical transformation, verify |
 
 **Typical flow:**
 ```
 /b-plan [task] → approve plan → implement from plan/protocol → run targeted checks → /b-review → commit
-/b-research [question]  (any time you need docs or comparisons)
+/b-research [question]  (any time you need docs, API facts, quick lookup, or comparisons)
 /b-debug [symptom]      (any time something breaks)
 /b-test [task]          (write or fix tests)
 /b-refactor [target]    (mechanical code transformation)
-/b-lookup [question]    (single-sentence API or config lookup)
 ```
 
 `/b-plan` supports **quick mode** for scoped daily tasks and **full mode** for unclear, high-risk, or multi-layer work. After the user approves a plan, implementation may continue in the same session.
@@ -78,4 +76,4 @@ Claude Code's dynamic tool loading causes **agent drift** — the agent may forg
 }
 ```
 
-Or run `install.sh` and choose **Y** when prompted — hooks are installed automatically.
+Or run `install.sh` — hooks are installed automatically.

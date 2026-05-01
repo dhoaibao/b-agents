@@ -48,31 +48,34 @@ how should I approach refactoring the auth module?
 
 ### b-research
 
-All external knowledge in one skill: library docs lookups and deep multi-source research.
+All external knowledge in one skill: auto-detects quick lookup vs full multi-source research.
 
 **Core behavior**
-- Classifies query into VERSION / COMPARE / NEWS / HOWTO/API.
-- For HOWTO/API queries: detects project version from manifests/lockfiles → Context7 first → web search for community context.
-- For simple library lookups where Context7 answers the question: stops and presents Library Lookup format directly.
-- For broad queries: Brave Search → Firecrawl scrape → structured data extraction (when query asks about specific fields) → quality gate → synthesis report.
+- Starts with mode detection: quick lookup for single-fact questions, full mode for comparisons, cited reports, recency, or page-reading.
+- For library/framework API questions: Context7 first.
+- In quick mode: answers in 1–3 sentences with a minimal example, capped at 2 tool calls, and never scrapes.
+- If quick mode is insufficient, escalates automatically to full mode instead of asking the user to switch skills.
+- In full mode: classifies query into VERSION / COMPARE / NEWS / HOWTO/API → Brave Search → Firecrawl scrape/extract → quality gate → synthesis report.
 - Uses `sequential-thinking` only when conflicting sources materially change the recommendation.
 - Prefers 3 high-quality sources over 5 mixed-quality ones.
 
 **Good triggers**
 ```text
 /b-research how do I configure retries in BullMQ?
+/b-research what's the signature of Array.prototype.flatMap?
 /b-research compare bullmq vs bee-queue for job queues
 /b-research best practices for webhook signature verification
 tra cứu cách dùng thư viện Prisma
 ```
 
 **Output**
-- **Library lookup**: concise API summary with key methods, example, and version notes.
+- **Quick lookup**: concise 1–3 sentence answer with minimal example and source.
 - **Research report**: structured report with summary, findings, optional comparison table, limitations, and cited sources.
 
 **Key limits**
-- Default scrape cap: 3 URLs per session; 5 for COMPARE queries.
-- Never fill factual gaps from training data when sources do not support them.
+- Quick mode caps at 2 tool calls before escalating or answering.
+- Default scrape cap in full mode: 3 URLs per session; 5 for COMPARE queries.
+- Never fill factual gaps from training data in full mode when sources do not support them.
 
 ---
 
@@ -189,15 +192,15 @@ Test type → Test structure → Issue/Requirements → Fix/Implementation → V
 
 ### b-lookup
 
-Ultra-fast single-fact library or API lookup.
+Legacy compatibility alias for `b-research` quick mode.
 
 **Core behavior**
-- Classifies question as library API vs general → Context7 first, single Brave search fallback.
-- Caps at 2 tool calls total.
-- Returns a 1–3 sentence answer with a minimal example — no report, no citations list, no synthesis.
-- If Context7 fails and Brave has no match: returns answer from training knowledge with a confidence caveat.
+- Hidden from normal invocation and not auto-triggered.
+- Exists only so older habits or explicit `/b-lookup` calls still work.
+- Uses the same quick-mode behavior as `b-research`: Context7 first for library questions, one Brave fallback, no scraping.
+- If the answer needs multiple sources or page reads, escalate to `b-research` full mode.
 
-**Distinguishing factor**: b-research produces a structured report with sources; b-lookup produces a direct answer.
+**Recommended entry point**: use `/b-research` for both quick lookups and deep research.
 
 **Good triggers**
 ```text
@@ -218,9 +221,9 @@ Source: Context7(library-id) / Brave Search
 ```
 
 **Key rules**
-- Never scrape or crawl — if a page read is needed, use /b-research instead.
-- Never call sequentialthinking — this skill is intentionally simple.
-- Cap at 2 tool calls. If the answer needs more, delegate to /b-research.
+- Do not auto-invoke this skill.
+- Do not present this as the preferred user-facing choice.
+- Never scrape or crawl here; escalate to /b-research full mode if needed.
 
 ---
 
@@ -312,8 +315,8 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 
 ## Trigger tips
 
-- Invoke skills with `/` prefix: `/b-plan`, `/b-debug`, `/b-review`, `/b-research`, `/b-test`, `/b-lookup`, `/b-refactor`
-- Use explicit intent words: `plan`, `debug`, `review`, `research`, `test`, `lookup`, `refactor`
+- Invoke skills with `/` prefix: `/b-plan`, `/b-debug`, `/b-review`, `/b-research`, `/b-test`, `/b-refactor`
+- Use explicit intent words: `plan`, `debug`, `review`, `research`, `lookup`, `test`, `refactor`
 - Mention complexity when relevant: multi-file, unfamiliar module, unclear root cause.
 
 ---
@@ -336,5 +339,6 @@ Target → Impact → Risk → Transformation plan → Changes → Verification
 /b-refactor ───────────── rename/move/extract ──► /b-review (after transformation)
             └──────────── test fails ─────────────► /b-test or /b-debug
 
-/b-lookup ────────────── standalone, no handoffs
+/b-research ──────────── quick lookup or full research, auto-routes internally
+/b-lookup ────────────── legacy alias to /b-research quick mode
 ```
