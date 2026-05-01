@@ -192,7 +192,6 @@ b-skills/
 ├── install.sh
 ├── README.md
 ├── REFERENCE.md
-├── TIERS.md
 └── CLAUDE.md              ← Repo-level instructions + authoring conventions
 ```
 
