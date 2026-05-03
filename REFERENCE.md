@@ -195,6 +195,39 @@ Test type → Test structure → Issue/Requirements → Fix/Implementation → V
 
 ---
 
+### b-e2e
+
+Browser-based frontend testing and E2E script authoring.
+
+**Core behavior**
+- Uses Playwright MCP to navigate to the target web application.
+- Creates a temporary directory `.claude/b-e2e/` to store intermediate artifacts (screenshots and snapshots) during testing.
+- Relies on accessibility tree snapshots (`browser_snapshot`) saved to the temp directory to map the UI and get precise target references.
+- Performs sequential user interactions (clicks, typing, form fills).
+- Verifies UI state changes and network requests via updated snapshots.
+- Translates successful manual browser interactions into robust Playwright test code.
+- Cleans up the `.claude/b-e2e/` directory entirely when the flow is finished.
+
+**Good triggers**
+```text
+/b-e2e write a test for the checkout flow
+/b-e2e verify the login page is rendering correctly
+chạy E2E test cho form đăng ký
+```
+
+**Output**
+```
+Target URL → UI Snapshot → Interactions Performed → Assertions/Results → [Optional] Test Code → Cleanup
+```
+
+**Key rules**
+- Inherently requires the `playwright` MCP to function.
+- Never guess element selectors; always read the `browser_snapshot` first.
+- All testing artifacts must go into `.claude/b-e2e/` and be removed upon completion.
+- Distinct from `b-test`, which handles code-level unit testing without a live browser.
+
+---
+
 ### b-lookup
 
 Legacy compatibility alias for `b-research` quick mode.

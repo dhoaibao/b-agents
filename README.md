@@ -26,6 +26,7 @@ Six primary skills covering the full development cycle. The repo still contains 
 | `/b-debug` | Full-loop debugging — trace, confirm root cause, fix, verify |
 | `/b-review` | Pre-PR review — logic, requirements, edge cases, test adequacy |
 | `/b-test` | Test-driven development — write tests, fix failing tests, evaluate coverage |
+| `/b-e2e` | Browser-based UI testing — navigate, interact, verify visual state, and author Playwright E2E tests |
 | `/b-refactor` | Code refactoring — impact analysis, safe mechanical transformation, verify |
 
 **Typical flow:**
@@ -51,6 +52,7 @@ See [REFERENCE.md](REFERENCE.md) for full details — triggers, output format, r
 | `context7` | Live, version-accurate library docs |
 | `brave-search` | Real web search |
 | `firecrawl` | Full page scraping, structured data extraction |
+| `playwright` | Browser automation, DOM snapshots, and UI interaction for E2E testing |
 | `sequential-thinking` | Structured reasoning for multi-hypothesis decisions |
 
 Verify all 5 are connected in Claude Code (`/mcp`).
